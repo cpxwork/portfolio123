@@ -1,0 +1,12 @@
+﻿check_name,records
+raw_events,23678
+out_of_window_events,8
+unknown_user_events,6
+test_user_events,452
+valid_scope_event_rows,23212
+deduplicated_events,22334
+raw_order_snapshots,572
+clean_orders_as_of_cutoff,253
+fully_refunded_paid_orders,15
+partially_refunded_paid_orders,18
+unmatured_d7_users,202

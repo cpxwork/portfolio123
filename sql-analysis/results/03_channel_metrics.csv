@@ -1,0 +1,5 @@
+﻿channel,registered_users,active_users,net_paying_users,registered_to_pay_rate,active_to_pay_rate,net_revenue_yuan
+organic,401,351,55,0.137157,0.156695,4059.15
+paid_search,319,290,49,0.153605,0.168966,3210.15
+campus,243,213,39,0.160494,0.183099,3375.45
+referral,213,190,38,0.178404,0.2,2770.65

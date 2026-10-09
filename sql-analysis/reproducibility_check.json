@@ -1,0 +1,12 @@
+{
+  "data_source": "synthetic_only",
+  "ai_assisted_creation": true,
+  "checked_on": "2026-10-08",
+  "seed": 20261008,
+  "full_runs_compared": 2,
+  "csv_files_compared": 11,
+  "all_csv_sha256_identical": true,
+  "independent_numeric_checks_per_run": 16,
+  "all_numeric_checks_passed": true,
+  "scope": "Default seed and parameters. This is reproducibility of a simulated learning exercise, not business validation."
+}

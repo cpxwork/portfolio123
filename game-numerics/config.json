@@ -1,0 +1,33 @@
+{
+  "title": "星灯远征：角色成长数值设计练习",
+  "origin": "2026-10-08 本轮新生成的 AI 辅助设计练习；所有数值为自定假设，未经过玩家验证，非既有游戏经验，非上线成果。",
+  "max_level": 20,
+  "start_gold": 300,
+  "simulation_days": 90,
+  "run_minutes": 5,
+  "xp_success": 90,
+  "xp_failure": 30,
+  "gold_success": 40,
+  "gold_failure": 10,
+  "run_fee": 15,
+  "quest_min_runs": 3,
+  "quest_xp": 200,
+  "quest_gold": 60,
+  "xp_base": 100,
+  "xp_linear": 35,
+  "xp_quadratic": 10,
+  "cost_base": 50,
+  "cost_linear": 8,
+  "cost_quadratic": 1.5,
+  "reward_base": 20,
+  "reward_linear": 5,
+  "milestone_levels": [5, 10, 15, 20],
+  "milestone_gold": 100,
+  "xp_multipliers": [0.8, 1.0, 1.2],
+  "upgrade_cost_multipliers": [0.8, 1.0, 1.2],
+  "scenarios": [
+    {"id": "light", "name": "轻度投入", "minutes_per_day": 15, "success_rate": 0.70},
+    {"id": "standard", "name": "标准投入", "minutes_per_day": 30, "success_rate": 0.85},
+    {"id": "heavy", "name": "高投入", "minutes_per_day": 60, "success_rate": 0.95}
+  ]
+}

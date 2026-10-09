@@ -1,0 +1,22 @@
+'use strict';
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),path=require('node:path');
+const dir=__dirname;
+const ctx={};vm.runInNewContext(fs.readFileSync(path.join(dir,'model.js'),'utf8'),ctx);const L=ctx.PlatformLab;
+let n=0;function check(id,fn){fn();n++;process.stdout.write(id+' PASS\n');}
+const ids=rows=>Array.from(rows,m=>m.id).sort().join(',');
+check('AC01',()=>{assert.equal(L.metrics.length,8);assert.equal(new Set(L.metrics.map(m=>m.id)).size,8);L.metrics.forEach(m=>['id','name','domain','type','unit','owner','definition','formula','source','version','maturity'].forEach(k=>assert.ok(m[k])));});
+check('AC02',()=>assert.equal(ids(L.search('付费')),'M05,M08'));
+check('AC03',()=>assert.equal(ids(L.search('','增长','复合')),'M05,M06,M08'));
+check('AC04',()=>{assert.equal(ids(L.search('交易产品')),'M03,M07');assert.equal(L.search('not-found').length,0);assert.equal(L.search('').length,8);});
+check('AC05',()=>{assert.equal(Array.from(L.metrics.find(m=>m.id==='M05').upstreams,u=>u.id).sort().join(','),'M01,M04');assert.equal(ids(L.downstream('M01')),'M04,M05,M06,M08');});
+check('AC06',()=>{assert.equal(L.ratio(80,1000),0.08);assert.equal(L.ratio(160,2000),0.08);assert.equal(L.ratio(80,160),0.5);});
+check('AC07',()=>{assert.equal(L.ratio(80,0),null);assert.equal(L.errors.zero.result,'—');assert.match(L.errors.zero.title,/无可计算样本/);});
+check('AC08',()=>{assert.equal(L.inDay('2026-10-01T00:00:00+08:00','2026-10-01'),true);assert.equal(L.inDay('2026-10-02T00:00:00+08:00','2026-10-01'),false);assert.equal(L.inDay('2026-10-01T23:59:59+08:00','2026-10-01'),true);});
+const users=[{user_id:'u1',registered_at:'2026-10-01T08:00:00+08:00'},{user_id:'u2',registered_at:'2026-10-01T09:00:00+08:00'},{user_id:'u3',registered_at:'2026-10-01T10:00:00+08:00'},{user_id:'old',registered_at:'2026-09-01T00:00:00+08:00'},{user_id:'test',registered_at:'2026-10-01T00:00:00+08:00',is_test:true}];
+const txn=(id,u,t,a=1000,kind='payment')=>({record_id:id,user_id:u,occurred_at:t,amount_fen:a,record_type:kind,status:'success'});
+const rows=[txn('p1','u1','2026-10-01T09:00:00+08:00',5000),txn('p1','u1','2026-10-01T09:00:00+08:00',5000),txn('p2','u1','2026-10-02T09:00:00+08:00',1000),txn('r1','u1','2026-10-01T10:00:00+08:00',2000,'refund'),txn('o1','old','2026-09-30T09:00:00+08:00'),txn('o2','old','2026-10-01T09:00:00+08:00',2000),txn('u2','u2','2026-10-07T23:59:59+08:00'),txn('u3','u3','2026-10-08T00:00:00+08:00'),txn('test','test','2026-10-01T11:00:00+08:00',99000)];
+check('AC09',()=>{const f=L.firstPayments(rows,users);assert.equal(f.u1,'2026-10-01T09:00:00+08:00');assert.equal(f.old,'2026-09-30T09:00:00+08:00');assert.equal(f.test,undefined);assert.equal(L.netAmount(rows,users,'2026-10-01'),50);assert.equal(L.netAmount([txn('r','u1','2026-10-01T12:00:00+08:00',500,'refund')],users,'2026-10-01'),-5);});
+check('AC10',()=>{let r=L.cohort7(users,rows,'2026-10-01','2026-10-08T08:00:00+08:00');assert.equal(r.status,'观察中');assert.equal(r.value,null);r=L.cohort7(users,rows,'2026-10-01','2026-10-08T09:00:00+08:00');assert.equal(r.status,'可定稿');assert.equal(r.value,2/3);assert.equal(L.cohort7([],[],'2026-10-01','2026-10-08T09:00:00+08:00').value,null);});
+check('AC11',()=>{const r=L.cohort7(users,rows,'2026-10-01','2026-10-08T09:00:00+08:00',false);assert.equal(r.status,'数据延迟');assert.equal(r.value,null);assert.equal(L.errors.delayed.result,'—');assert.match(L.errors.delayed.reason,/transactions/);});
+check('AC12',()=>{assert.equal(L.errors.version.result,'—');assert.match(L.errors.version.reason,/v1.0/);assert.match(L.errors.version.reason,/v1.1/);assert.match(L.errors.version.action,/核对/);});
+const html=fs.readFileSync(path.join(dir,'指标平台原型.html'),'utf8');const blocks=Array.from(html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g),m=>m[1]).filter(Boolean);blocks.forEach(src=>new vm.Script(src));assert.match(html,/src="model.js"/);assert.match(html,/AI 辅助学习作品/);assert.equal(L.cases.length,12);process.stdout.write('HTML inline JS syntax PASS\n');process.stdout.write(n+' model checks passed; no browser or production integration test claimed.\n');

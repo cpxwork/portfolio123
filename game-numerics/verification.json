@@ -1,0 +1,71 @@
+{
+  "exercise_origin": "2026-10-08 本轮新生成的 AI 辅助设计练习；所有数值为自定假设，未经过玩家验证，非既有游戏经验，非上线成果。",
+  "test_count": 8,
+  "passed": 8,
+  "tests": [
+    {
+      "test_id": "T01",
+      "test_name": "配置递增与一致性",
+      "action": "读取 CSV 并复算 1–20 级累计经验与配置",
+      "expected": "19 段经验严格递增；20 级封顶；累计到 20 级 28975 XP",
+      "status": "PASS",
+      "detail": "所有断言通过"
+    },
+    {
+      "test_id": "T02",
+      "test_name": "经验阈值",
+      "action": "分别输入 99/100 XP 与 50 金币",
+      "expected": "99 XP 不升；100 XP 升 2 级，余 20 金币",
+      "status": "PASS",
+      "detail": "所有断言通过"
+    },
+    {
+      "test_id": "T03",
+      "test_name": "单次连升",
+      "action": "一次输入升至 5 级所需的累计 XP 与全部升级费用",
+      "expected": "连续升 4 次；成本、经验与一次性奖励账一致",
+      "status": "PASS",
+      "detail": "所有断言通过"
+    },
+    {
+      "test_id": "T04",
+      "test_name": "金币不足与恢复",
+      "action": "100 XP 配 49 金币，随后补 1 金币",
+      "expected": "先保留资源不升；补足后升 2 级",
+      "status": "PASS",
+      "detail": "所有断言通过"
+    },
+    {
+      "test_id": "T05",
+      "test_name": "封顶与奖励幂等",
+      "action": "19 级输入足量经验与 77 额外 XP，到 20 后再加 90 XP",
+      "expected": "只发一次 20 级奖励；167 XP 进溢出记录，无第 21 级",
+      "status": "PASS",
+      "detail": "所有断言通过"
+    },
+    {
+      "test_id": "T06",
+      "test_name": "每日资源账",
+      "action": "核对 270 条逐日记录，重新运行并比较 CSV",
+      "expected": "金币与经验守恒、余额非负、跨日状态一致、结果可复现",
+      "status": "PASS",
+      "detail": "所有断言通过"
+    },
+    {
+      "test_id": "T07",
+      "test_name": "三情景排序",
+      "action": "复算轻度/标准/高投入情景与摘要",
+      "expected": "高投入先封顶；三组无金币卡点或无法开战",
+      "status": "PASS",
+      "detail": "所有断言通过"
+    },
+    {
+      "test_id": "T08",
+      "test_name": "敏感度与复现",
+      "action": "复算 27 组倍率组合并检查经验倍率方向",
+      "expected": "CSV 完全一致、余额非负；固定基础成本时经验增加不延迟封顶",
+      "status": "PASS",
+      "detail": "所有断言通过"
+    }
+  ]
+}
