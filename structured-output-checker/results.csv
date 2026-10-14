@@ -1,0 +1,9 @@
+﻿case_id,description,expected_rule_pass,actual_rule_pass,expected_issue_codes,actual_issue_codes,matches_expected
+PASS-01,3 条合法字段、日期及输入来源,True,True,,,True
+PASS-02,另一组 3 条合法输入来源与不同顺序,True,True,,,True
+FAIL-01,JSON 尾随逗号导致解析失败,False,False,json_parse_failed,json_parse_failed,True
+FAIL-02,第二条缺少 summary 必填字段,False,False,required_field_missing,required_field_missing,True
+FAIL-03,只输出 2 条，少于最少 3 条,False,False,insufficient_count,insufficient_count,True
+FAIL-04,第二条日期超出任务范围,False,False,date_out_of_range,date_out_of_range,True
+FAIL-05,第三条重复第一条的来源,False,False,duplicate_source,duplicate_source,True
+FAIL-06,第二条引用地址不属于输入来源,False,False,citation_not_provided,citation_not_provided,True

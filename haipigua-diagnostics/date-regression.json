@@ -1,0 +1,502 @@
+{
+  "date": "2026-10-14",
+  "scope": "Observed public-site issue + local proposed router patch; NOT deployed to Haipigua",
+  "sourceLine": 418,
+  "baselinePassed": 3,
+  "proposedPassed": 5,
+  "total": 5,
+  "baseline": [
+    {
+      "id": "date-01",
+      "input": "改到下午三点吧",
+      "expectedDate": "2026-10-15",
+      "expectedStart": "15:00",
+      "date": "2026-10-14",
+      "start": "15:00",
+      "replacedTask": "task1",
+      "passed": false,
+      "trace": {
+        "source": "local-demo",
+        "version": "1.0.0",
+        "text": "改到下午三点吧",
+        "intents": [
+          {
+            "index": 0,
+            "kind": "schedule",
+            "source": "local-demo",
+            "original": "改到下午三点吧",
+            "agents": [
+              "Agent 2"
+            ],
+            "confidence": 0.9,
+            "data": {
+              "canApply": true,
+              "date": "2026-10-14",
+              "dateExplicit": false,
+              "start": "15:00",
+              "end": "15:10",
+              "duration": 10,
+              "timeExplicit": true,
+              "rawHour": 3,
+              "rawMinute": 0,
+              "rawTime": "下午三点",
+              "timeAmbiguous": false,
+              "endAmbiguous": false,
+              "invalidTime": false,
+              "replaceTaskId": "task1"
+            },
+            "ideaId": "idea1"
+          }
+        ],
+        "clarification": null,
+        "notes": [],
+        "contextUpdates": {
+          "lastIdeaId": "idea1"
+        }
+      }
+    },
+    {
+      "id": "date-02",
+      "input": "改到今天下午三点吧",
+      "expectedDate": "2026-10-14",
+      "expectedStart": "15:00",
+      "date": "2026-10-14",
+      "start": "15:00",
+      "replacedTask": "task1",
+      "passed": true,
+      "trace": {
+        "source": "local-demo",
+        "version": "1.0.0",
+        "text": "改到今天下午三点吧",
+        "intents": [
+          {
+            "index": 0,
+            "kind": "schedule",
+            "source": "local-demo",
+            "original": "改到今天下午三点吧",
+            "agents": [
+              "Agent 2"
+            ],
+            "confidence": 0.9,
+            "data": {
+              "canApply": true,
+              "date": "2026-10-14",
+              "dateExplicit": true,
+              "start": "15:00",
+              "end": "15:10",
+              "duration": 10,
+              "timeExplicit": true,
+              "rawHour": 3,
+              "rawMinute": 0,
+              "rawTime": "下午三点",
+              "timeAmbiguous": false,
+              "endAmbiguous": false,
+              "invalidTime": false,
+              "replaceTaskId": "task1"
+            },
+            "ideaId": "idea1"
+          }
+        ],
+        "clarification": null,
+        "notes": [],
+        "contextUpdates": {
+          "lastIdeaId": "idea1"
+        }
+      }
+    },
+    {
+      "id": "date-03",
+      "input": "改到后天下午三点吧",
+      "expectedDate": "2026-10-16",
+      "expectedStart": "15:00",
+      "date": "2026-10-16",
+      "start": "15:00",
+      "replacedTask": "task1",
+      "passed": true,
+      "trace": {
+        "source": "local-demo",
+        "version": "1.0.0",
+        "text": "改到后天下午三点吧",
+        "intents": [
+          {
+            "index": 0,
+            "kind": "schedule",
+            "source": "local-demo",
+            "original": "改到后天下午三点吧",
+            "agents": [
+              "Agent 2"
+            ],
+            "confidence": 0.9,
+            "data": {
+              "canApply": true,
+              "date": "2026-10-16",
+              "dateExplicit": true,
+              "start": "15:00",
+              "end": "15:10",
+              "duration": 10,
+              "timeExplicit": true,
+              "rawHour": 3,
+              "rawMinute": 0,
+              "rawTime": "下午三点",
+              "timeAmbiguous": false,
+              "endAmbiguous": false,
+              "invalidTime": false,
+              "replaceTaskId": "task1"
+            },
+            "ideaId": "idea1"
+          }
+        ],
+        "clarification": null,
+        "notes": [],
+        "contextUpdates": {
+          "lastIdeaId": "idea1"
+        }
+      }
+    },
+    {
+      "id": "date-04",
+      "input": "明天下午三点再安排一次",
+      "expectedDate": "2026-10-15",
+      "expectedStart": "15:00",
+      "date": "2026-10-15",
+      "start": "15:00",
+      "replacedTask": null,
+      "passed": true,
+      "trace": {
+        "source": "local-demo",
+        "version": "1.0.0",
+        "text": "明天下午三点再安排一次",
+        "intents": [
+          {
+            "index": 0,
+            "kind": "schedule",
+            "source": "local-demo",
+            "original": "明天下午三点再安排一次",
+            "agents": [
+              "Agent 2"
+            ],
+            "confidence": 0.9,
+            "data": {
+              "canApply": true,
+              "date": "2026-10-15",
+              "dateExplicit": true,
+              "start": "15:00",
+              "end": "15:10",
+              "duration": 10,
+              "timeExplicit": true,
+              "rawHour": 3,
+              "rawMinute": 0,
+              "rawTime": "下午三点",
+              "timeAmbiguous": false,
+              "endAmbiguous": false,
+              "invalidTime": false,
+              "replaceTaskId": null
+            },
+            "ideaId": "idea1"
+          }
+        ],
+        "clarification": null,
+        "notes": [],
+        "contextUpdates": {
+          "lastIdeaId": "idea1"
+        }
+      }
+    },
+    {
+      "id": "date-05",
+      "input": "改到下午四点吧",
+      "expectedDate": "2026-10-15",
+      "expectedStart": "16:00",
+      "date": "2026-10-14",
+      "start": "16:00",
+      "replacedTask": "task1",
+      "passed": false,
+      "trace": {
+        "source": "local-demo",
+        "version": "1.0.0",
+        "text": "改到下午四点吧",
+        "intents": [
+          {
+            "index": 0,
+            "kind": "schedule",
+            "source": "local-demo",
+            "original": "改到下午四点吧",
+            "agents": [
+              "Agent 2"
+            ],
+            "confidence": 0.9,
+            "data": {
+              "canApply": true,
+              "date": "2026-10-14",
+              "dateExplicit": false,
+              "start": "16:00",
+              "end": "16:10",
+              "duration": 10,
+              "timeExplicit": true,
+              "rawHour": 4,
+              "rawMinute": 0,
+              "rawTime": "下午四点",
+              "timeAmbiguous": false,
+              "endAmbiguous": false,
+              "invalidTime": false,
+              "replaceTaskId": "task1"
+            },
+            "ideaId": "idea1"
+          }
+        ],
+        "clarification": null,
+        "notes": [],
+        "contextUpdates": {
+          "lastIdeaId": "idea1"
+        }
+      }
+    }
+  ],
+  "proposed": [
+    {
+      "id": "date-01",
+      "input": "改到下午三点吧",
+      "expectedDate": "2026-10-15",
+      "expectedStart": "15:00",
+      "date": "2026-10-15",
+      "start": "15:00",
+      "replacedTask": "task1",
+      "passed": true,
+      "trace": {
+        "source": "local-demo",
+        "version": "1.0.0",
+        "text": "改到下午三点吧",
+        "intents": [
+          {
+            "index": 0,
+            "kind": "schedule",
+            "source": "local-demo",
+            "original": "改到下午三点吧",
+            "agents": [
+              "Agent 2"
+            ],
+            "confidence": 0.9,
+            "data": {
+              "canApply": true,
+              "date": "2026-10-15",
+              "dateExplicit": false,
+              "start": "15:00",
+              "end": "15:10",
+              "duration": 10,
+              "timeExplicit": true,
+              "rawHour": 3,
+              "rawMinute": 0,
+              "rawTime": "下午三点",
+              "timeAmbiguous": false,
+              "endAmbiguous": false,
+              "invalidTime": false,
+              "replaceTaskId": "task1"
+            },
+            "ideaId": "idea1"
+          }
+        ],
+        "clarification": null,
+        "notes": [],
+        "contextUpdates": {
+          "lastIdeaId": "idea1"
+        }
+      }
+    },
+    {
+      "id": "date-02",
+      "input": "改到今天下午三点吧",
+      "expectedDate": "2026-10-14",
+      "expectedStart": "15:00",
+      "date": "2026-10-14",
+      "start": "15:00",
+      "replacedTask": "task1",
+      "passed": true,
+      "trace": {
+        "source": "local-demo",
+        "version": "1.0.0",
+        "text": "改到今天下午三点吧",
+        "intents": [
+          {
+            "index": 0,
+            "kind": "schedule",
+            "source": "local-demo",
+            "original": "改到今天下午三点吧",
+            "agents": [
+              "Agent 2"
+            ],
+            "confidence": 0.9,
+            "data": {
+              "canApply": true,
+              "date": "2026-10-14",
+              "dateExplicit": true,
+              "start": "15:00",
+              "end": "15:10",
+              "duration": 10,
+              "timeExplicit": true,
+              "rawHour": 3,
+              "rawMinute": 0,
+              "rawTime": "下午三点",
+              "timeAmbiguous": false,
+              "endAmbiguous": false,
+              "invalidTime": false,
+              "replaceTaskId": "task1"
+            },
+            "ideaId": "idea1"
+          }
+        ],
+        "clarification": null,
+        "notes": [],
+        "contextUpdates": {
+          "lastIdeaId": "idea1"
+        }
+      }
+    },
+    {
+      "id": "date-03",
+      "input": "改到后天下午三点吧",
+      "expectedDate": "2026-10-16",
+      "expectedStart": "15:00",
+      "date": "2026-10-16",
+      "start": "15:00",
+      "replacedTask": "task1",
+      "passed": true,
+      "trace": {
+        "source": "local-demo",
+        "version": "1.0.0",
+        "text": "改到后天下午三点吧",
+        "intents": [
+          {
+            "index": 0,
+            "kind": "schedule",
+            "source": "local-demo",
+            "original": "改到后天下午三点吧",
+            "agents": [
+              "Agent 2"
+            ],
+            "confidence": 0.9,
+            "data": {
+              "canApply": true,
+              "date": "2026-10-16",
+              "dateExplicit": true,
+              "start": "15:00",
+              "end": "15:10",
+              "duration": 10,
+              "timeExplicit": true,
+              "rawHour": 3,
+              "rawMinute": 0,
+              "rawTime": "下午三点",
+              "timeAmbiguous": false,
+              "endAmbiguous": false,
+              "invalidTime": false,
+              "replaceTaskId": "task1"
+            },
+            "ideaId": "idea1"
+          }
+        ],
+        "clarification": null,
+        "notes": [],
+        "contextUpdates": {
+          "lastIdeaId": "idea1"
+        }
+      }
+    },
+    {
+      "id": "date-04",
+      "input": "明天下午三点再安排一次",
+      "expectedDate": "2026-10-15",
+      "expectedStart": "15:00",
+      "date": "2026-10-15",
+      "start": "15:00",
+      "replacedTask": null,
+      "passed": true,
+      "trace": {
+        "source": "local-demo",
+        "version": "1.0.0",
+        "text": "明天下午三点再安排一次",
+        "intents": [
+          {
+            "index": 0,
+            "kind": "schedule",
+            "source": "local-demo",
+            "original": "明天下午三点再安排一次",
+            "agents": [
+              "Agent 2"
+            ],
+            "confidence": 0.9,
+            "data": {
+              "canApply": true,
+              "date": "2026-10-15",
+              "dateExplicit": true,
+              "start": "15:00",
+              "end": "15:10",
+              "duration": 10,
+              "timeExplicit": true,
+              "rawHour": 3,
+              "rawMinute": 0,
+              "rawTime": "下午三点",
+              "timeAmbiguous": false,
+              "endAmbiguous": false,
+              "invalidTime": false,
+              "replaceTaskId": null
+            },
+            "ideaId": "idea1"
+          }
+        ],
+        "clarification": null,
+        "notes": [],
+        "contextUpdates": {
+          "lastIdeaId": "idea1"
+        }
+      }
+    },
+    {
+      "id": "date-05",
+      "input": "改到下午四点吧",
+      "expectedDate": "2026-10-15",
+      "expectedStart": "16:00",
+      "date": "2026-10-15",
+      "start": "16:00",
+      "replacedTask": "task1",
+      "passed": true,
+      "trace": {
+        "source": "local-demo",
+        "version": "1.0.0",
+        "text": "改到下午四点吧",
+        "intents": [
+          {
+            "index": 0,
+            "kind": "schedule",
+            "source": "local-demo",
+            "original": "改到下午四点吧",
+            "agents": [
+              "Agent 2"
+            ],
+            "confidence": 0.9,
+            "data": {
+              "canApply": true,
+              "date": "2026-10-15",
+              "dateExplicit": false,
+              "start": "16:00",
+              "end": "16:10",
+              "duration": 10,
+              "timeExplicit": true,
+              "rawHour": 4,
+              "rawMinute": 0,
+              "rawTime": "下午四点",
+              "timeAmbiguous": false,
+              "endAmbiguous": false,
+              "invalidTime": false,
+              "replaceTaskId": "task1"
+            },
+            "ideaId": "idea1"
+          }
+        ],
+        "clarification": null,
+        "notes": [],
+        "contextUpdates": {
+          "lastIdeaId": "idea1"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,107 @@
+{
+  "exercise": "论文摘要结构化输出核验：离线学习练习",
+  "learning_date": "2026-10-12",
+  "provenance": "本次 AI 辅助新增练习；所有输出由人工构造；所有论文和 mock:// 来源均为模拟。",
+  "task": {
+    "min_papers": 3,
+    "date_start": "2024-01-01",
+    "date_end": "2025-12-31",
+    "provided_sources": [
+      {
+        "source_id": "SIM-A",
+        "title": "模拟论文 A：摘要结构的练习",
+        "published_date": "2024-03-11",
+        "citation_url": "mock://provided/SIM-A"
+      },
+      {
+        "source_id": "SIM-B",
+        "title": "模拟论文 B：规则检查的练习",
+        "published_date": "2024-08-20",
+        "citation_url": "mock://provided/SIM-B"
+      },
+      {
+        "source_id": "SIM-C",
+        "title": "模拟论文 C：来源去重的练习",
+        "published_date": "2025-02-14",
+        "citation_url": "mock://provided/SIM-C"
+      },
+      {
+        "source_id": "SIM-D",
+        "title": "模拟论文 D：输出复核的练习",
+        "published_date": "2025-11-06",
+        "citation_url": "mock://provided/SIM-D"
+      }
+    ]
+  },
+  "cases": [
+    {
+      "case_id": "PASS-01",
+      "description": "3 条合法字段、日期及输入来源",
+      "raw_output": "{\"papers\":[{\"source_id\":\"SIM-A\",\"title\":\"模拟论文 A：摘要结构的练习\",\"published_date\":\"2024-03-11\",\"citation_url\":\"mock://provided/SIM-A\",\"summary\":\"人工构造的 SIM-A 模拟摘要，只用于字段规则练习，不包含真实研究结论。\"},{\"source_id\":\"SIM-B\",\"title\":\"模拟论文 B：规则检查的练习\",\"published_date\":\"2024-08-20\",\"citation_url\":\"mock://provided/SIM-B\",\"summary\":\"人工构造的 SIM-B 模拟摘要，只用于字段规则练习，不包含真实研究结论。\"},{\"source_id\":\"SIM-C\",\"title\":\"模拟论文 C：来源去重的练习\",\"published_date\":\"2025-02-14\",\"citation_url\":\"mock://provided/SIM-C\",\"summary\":\"人工构造的 SIM-C 模拟摘要，只用于字段规则练习，不包含真实研究结论。\"}]}",
+      "expected_rule_pass": true,
+      "expected_issue_codes": []
+    },
+    {
+      "case_id": "PASS-02",
+      "description": "另一组 3 条合法输入来源与不同顺序",
+      "raw_output": "{\"papers\":[{\"source_id\":\"SIM-D\",\"title\":\"模拟论文 D：输出复核的练习\",\"published_date\":\"2025-11-06\",\"citation_url\":\"mock://provided/SIM-D\",\"summary\":\"人工构造的 SIM-D 模拟摘要，只用于字段规则练习，不包含真实研究结论。\"},{\"source_id\":\"SIM-B\",\"title\":\"模拟论文 B：规则检查的练习\",\"published_date\":\"2024-08-20\",\"citation_url\":\"mock://provided/SIM-B\",\"summary\":\"人工构造的 SIM-B 模拟摘要，只用于字段规则练习，不包含真实研究结论。\"},{\"source_id\":\"SIM-C\",\"title\":\"模拟论文 C：来源去重的练习\",\"published_date\":\"2025-02-14\",\"citation_url\":\"mock://provided/SIM-C\",\"summary\":\"人工构造的 SIM-C 模拟摘要，只用于字段规则练习，不包含真实研究结论。\"}]}",
+      "expected_rule_pass": true,
+      "expected_issue_codes": []
+    },
+    {
+      "case_id": "FAIL-01",
+      "description": "JSON 尾随逗号导致解析失败",
+      "raw_output": "{\"papers\": [],}",
+      "expected_rule_pass": false,
+      "expected_issue_codes": [
+        "json_parse_failed"
+      ]
+    },
+    {
+      "case_id": "FAIL-02",
+      "description": "第二条缺少 summary 必填字段",
+      "raw_output": "{\"papers\":[{\"source_id\":\"SIM-A\",\"title\":\"模拟论文 A：摘要结构的练习\",\"published_date\":\"2024-03-11\",\"citation_url\":\"mock://provided/SIM-A\",\"summary\":\"人工构造的 SIM-A 模拟摘要，只用于字段规则练习，不包含真实研究结论。\"},{\"source_id\":\"SIM-B\",\"title\":\"模拟论文 B：规则检查的练习\",\"published_date\":\"2024-08-20\",\"citation_url\":\"mock://provided/SIM-B\"},{\"source_id\":\"SIM-C\",\"title\":\"模拟论文 C：来源去重的练习\",\"published_date\":\"2025-02-14\",\"citation_url\":\"mock://provided/SIM-C\",\"summary\":\"人工构造的 SIM-C 模拟摘要，只用于字段规则练习，不包含真实研究结论。\"}]}",
+      "expected_rule_pass": false,
+      "expected_issue_codes": [
+        "required_field_missing"
+      ]
+    },
+    {
+      "case_id": "FAIL-03",
+      "description": "只输出 2 条，少于最少 3 条",
+      "raw_output": "{\"papers\":[{\"source_id\":\"SIM-A\",\"title\":\"模拟论文 A：摘要结构的练习\",\"published_date\":\"2024-03-11\",\"citation_url\":\"mock://provided/SIM-A\",\"summary\":\"人工构造的 SIM-A 模拟摘要，只用于字段规则练习，不包含真实研究结论。\"},{\"source_id\":\"SIM-B\",\"title\":\"模拟论文 B：规则检查的练习\",\"published_date\":\"2024-08-20\",\"citation_url\":\"mock://provided/SIM-B\",\"summary\":\"人工构造的 SIM-B 模拟摘要，只用于字段规则练习，不包含真实研究结论。\"}]}",
+      "expected_rule_pass": false,
+      "expected_issue_codes": [
+        "insufficient_count"
+      ]
+    },
+    {
+      "case_id": "FAIL-04",
+      "description": "第二条日期超出任务范围",
+      "raw_output": "{\"papers\":[{\"source_id\":\"SIM-A\",\"title\":\"模拟论文 A：摘要结构的练习\",\"published_date\":\"2024-03-11\",\"citation_url\":\"mock://provided/SIM-A\",\"summary\":\"人工构造的 SIM-A 模拟摘要，只用于字段规则练习，不包含真实研究结论。\"},{\"source_id\":\"SIM-B\",\"title\":\"模拟论文 B：规则检查的练习\",\"published_date\":\"2023-12-31\",\"citation_url\":\"mock://provided/SIM-B\",\"summary\":\"人工构造的 SIM-B 模拟摘要，只用于字段规则练习，不包含真实研究结论。\"},{\"source_id\":\"SIM-C\",\"title\":\"模拟论文 C：来源去重的练习\",\"published_date\":\"2025-02-14\",\"citation_url\":\"mock://provided/SIM-C\",\"summary\":\"人工构造的 SIM-C 模拟摘要，只用于字段规则练习，不包含真实研究结论。\"}]}",
+      "expected_rule_pass": false,
+      "expected_issue_codes": [
+        "date_out_of_range"
+      ]
+    },
+    {
+      "case_id": "FAIL-05",
+      "description": "第三条重复第一条的来源",
+      "raw_output": "{\"papers\":[{\"source_id\":\"SIM-A\",\"title\":\"模拟论文 A：摘要结构的练习\",\"published_date\":\"2024-03-11\",\"citation_url\":\"mock://provided/SIM-A\",\"summary\":\"人工构造的 SIM-A 模拟摘要，只用于字段规则练习，不包含真实研究结论。\"},{\"source_id\":\"SIM-B\",\"title\":\"模拟论文 B：规则检查的练习\",\"published_date\":\"2024-08-20\",\"citation_url\":\"mock://provided/SIM-B\",\"summary\":\"人工构造的 SIM-B 模拟摘要，只用于字段规则练习，不包含真实研究结论。\"},{\"source_id\":\"SIM-A\",\"title\":\"模拟论文 A：摘要结构的练习\",\"published_date\":\"2024-03-11\",\"citation_url\":\"mock://provided/SIM-A\",\"summary\":\"人工构造的 SIM-A 模拟摘要，只用于字段规则练习，不包含真实研究结论。\"}]}",
+      "expected_rule_pass": false,
+      "expected_issue_codes": [
+        "duplicate_source"
+      ]
+    },
+    {
+      "case_id": "FAIL-06",
+      "description": "第二条引用地址不属于输入来源",
+      "raw_output": "{\"papers\":[{\"source_id\":\"SIM-A\",\"title\":\"模拟论文 A：摘要结构的练习\",\"published_date\":\"2024-03-11\",\"citation_url\":\"mock://provided/SIM-A\",\"summary\":\"人工构造的 SIM-A 模拟摘要，只用于字段规则练习，不包含真实研究结论。\"},{\"source_id\":\"SIM-B\",\"title\":\"模拟论文 B：规则检查的练习\",\"published_date\":\"2024-08-20\",\"citation_url\":\"mock://not-provided/SIM-X\",\"summary\":\"人工构造的 SIM-B 模拟摘要，只用于字段规则练习，不包含真实研究结论。\"},{\"source_id\":\"SIM-C\",\"title\":\"模拟论文 C：来源去重的练习\",\"published_date\":\"2025-02-14\",\"citation_url\":\"mock://provided/SIM-C\",\"summary\":\"人工构造的 SIM-C 模拟摘要，只用于字段规则练习，不包含真实研究结论。\"}]}",
+      "expected_rule_pass": false,
+      "expected_issue_codes": [
+        "citation_not_provided"
+      ]
+    }
+  ]
+}
+

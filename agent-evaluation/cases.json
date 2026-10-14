@@ -1,0 +1,644 @@
+[
+  {
+    "id": "D01",
+    "text": "为什么今天亏钱",
+    "expected": [
+      "diagnose"
+    ],
+    "hasRecords": true,
+    "reference": {
+      "tools": [
+        "diagnose_day"
+      ],
+      "quality": [
+        "source=local-simulation",
+        "simulation=true",
+        "nonempty-result",
+        "no-claims-of-actual-business-benefit"
+      ]
+    },
+    "split": "dev"
+  },
+  {
+    "id": "D02",
+    "text": "为什么排队的人这么多",
+    "expected": [
+      "diagnose"
+    ],
+    "hasRecords": true,
+    "reference": {
+      "tools": [
+        "diagnose_day"
+      ],
+      "quality": [
+        "source=local-simulation",
+        "simulation=true",
+        "nonempty-result",
+        "no-claims-of-actual-business-benefit"
+      ]
+    },
+    "split": "dev"
+  },
+  {
+    "id": "D03",
+    "text": "缺货是什么原因",
+    "expected": [
+      "diagnose"
+    ],
+    "hasRecords": true,
+    "reference": {
+      "tools": [
+        "diagnose_day"
+      ],
+      "quality": [
+        "source=local-simulation",
+        "simulation=true",
+        "nonempty-result",
+        "no-claims-of-actual-business-benefit"
+      ]
+    },
+    "split": "dev"
+  },
+  {
+    "id": "D04",
+    "text": "剩了好多杯，怎么回事",
+    "expected": [
+      "diagnose"
+    ],
+    "hasRecords": true,
+    "reference": {
+      "tools": [
+        "diagnose_day"
+      ],
+      "quality": [
+        "source=local-simulation",
+        "simulation=true",
+        "nonempty-result",
+        "no-claims-of-actual-business-benefit"
+      ]
+    },
+    "split": "dev"
+  },
+  {
+    "id": "D05",
+    "text": "给我一个备货方案",
+    "expected": [
+      "recommend"
+    ],
+    "hasRecords": true,
+    "reference": {
+      "tools": [
+        "compare_options"
+      ],
+      "quality": [
+        "source=local-simulation",
+        "simulation=true",
+        "nonempty-result",
+        "no-claims-of-actual-business-benefit"
+      ]
+    },
+    "split": "dev"
+  },
+  {
+    "id": "D06",
+    "text": "建议我怎么调价格",
+    "expected": [
+      "recommend"
+    ],
+    "hasRecords": true,
+    "reference": {
+      "tools": [
+        "compare_options"
+      ],
+      "quality": [
+        "source=local-simulation",
+        "simulation=true",
+        "nonempty-result",
+        "no-claims-of-actual-business-benefit"
+      ]
+    },
+    "split": "dev"
+  },
+  {
+    "id": "D07",
+    "text": "比较一下几种设置",
+    "expected": [
+      "recommend"
+    ],
+    "hasRecords": true,
+    "reference": {
+      "tools": [
+        "compare_options"
+      ],
+      "quality": [
+        "source=local-simulation",
+        "simulation=true",
+        "nonempty-result",
+        "no-claims-of-actual-business-benefit"
+      ]
+    },
+    "split": "dev"
+  },
+  {
+    "id": "D08",
+    "text": "下一天策略怎么选",
+    "expected": [
+      "recommend"
+    ],
+    "hasRecords": true,
+    "reference": {
+      "tools": [
+        "compare_options"
+      ],
+      "quality": [
+        "source=local-simulation",
+        "simulation=true",
+        "nonempty-result",
+        "no-claims-of-actual-business-benefit"
+      ]
+    },
+    "split": "dev"
+  },
+  {
+    "id": "D09",
+    "text": "看看累计利润",
+    "expected": [
+      "ledger"
+    ],
+    "hasRecords": true,
+    "reference": {
+      "tools": [
+        "get_ledger"
+      ],
+      "quality": [
+        "source=local-simulation",
+        "simulation=true",
+        "nonempty-result",
+        "no-claims-of-actual-business-benefit"
+      ]
+    },
+    "split": "dev"
+  },
+  {
+    "id": "D10",
+    "text": "现金变了多少",
+    "expected": [
+      "ledger"
+    ],
+    "hasRecords": true,
+    "reference": {
+      "tools": [
+        "get_ledger"
+      ],
+      "quality": [
+        "source=local-simulation",
+        "simulation=true",
+        "nonempty-result",
+        "no-claims-of-actual-business-benefit"
+      ]
+    },
+    "split": "dev"
+  },
+  {
+    "id": "D11",
+    "text": "导出账本CSV",
+    "expected": [
+      "ledger"
+    ],
+    "hasRecords": true,
+    "reference": {
+      "tools": [
+        "get_ledger"
+      ],
+      "quality": [
+        "source=local-simulation",
+        "simulation=true",
+        "nonempty-result",
+        "no-claims-of-actual-business-benefit"
+      ]
+    },
+    "split": "dev"
+  },
+  {
+    "id": "D12",
+    "text": "收入和成本总计",
+    "expected": [
+      "ledger"
+    ],
+    "hasRecords": true,
+    "reference": {
+      "tools": [
+        "get_ledger"
+      ],
+      "quality": [
+        "source=local-simulation",
+        "simulation=true",
+        "nonempty-result",
+        "no-claims-of-actual-business-benefit"
+      ]
+    },
+    "split": "dev"
+  },
+  {
+    "id": "D13",
+    "text": "先分析亏损，再给备货方案",
+    "expected": [
+      "diagnose",
+      "recommend"
+    ],
+    "hasRecords": true,
+    "reference": {
+      "tools": [
+        "diagnose_day",
+        "compare_options"
+      ],
+      "quality": [
+        "source=local-simulation",
+        "simulation=true",
+        "nonempty-result",
+        "no-claims-of-actual-business-benefit"
+      ]
+    },
+    "split": "dev"
+  },
+  {
+    "id": "D14",
+    "text": "先看账本，再分析排队原因",
+    "expected": [
+      "ledger",
+      "diagnose"
+    ],
+    "hasRecords": true,
+    "reference": {
+      "tools": [
+        "get_ledger",
+        "diagnose_day"
+      ],
+      "quality": [
+        "source=local-simulation",
+        "simulation=true",
+        "nonempty-result",
+        "no-claims-of-actual-business-benefit"
+      ]
+    },
+    "split": "dev"
+  },
+  {
+    "id": "D15",
+    "text": "给我方案，也看一下利润总计",
+    "expected": [
+      "recommend",
+      "ledger"
+    ],
+    "hasRecords": true,
+    "reference": {
+      "tools": [
+        "compare_options",
+        "get_ledger"
+      ],
+      "quality": [
+        "source=local-simulation",
+        "simulation=true",
+        "nonempty-result",
+        "no-claims-of-actual-business-benefit"
+      ]
+    },
+    "split": "dev"
+  },
+  {
+    "id": "D16",
+    "text": "不用给方案，只分析亏损",
+    "expected": [
+      "diagnose"
+    ],
+    "hasRecords": true,
+    "reference": {
+      "tools": [
+        "diagnose_day"
+      ],
+      "quality": [
+        "source=local-simulation",
+        "simulation=true",
+        "nonempty-result",
+        "no-claims-of-actual-business-benefit"
+      ]
+    },
+    "split": "dev"
+  },
+  {
+    "id": "D17",
+    "text": "不要分析原因，只导出账本",
+    "expected": [
+      "ledger"
+    ],
+    "hasRecords": true,
+    "reference": {
+      "tools": [
+        "get_ledger"
+      ],
+      "quality": [
+        "source=local-simulation",
+        "simulation=true",
+        "nonempty-result",
+        "no-claims-of-actual-business-benefit"
+      ]
+    },
+    "split": "dev"
+  },
+  {
+    "id": "D18",
+    "text": "别看账本，只给建议",
+    "expected": [
+      "recommend"
+    ],
+    "hasRecords": true,
+    "reference": {
+      "tools": [
+        "compare_options"
+      ],
+      "quality": [
+        "source=local-simulation",
+        "simulation=true",
+        "nonempty-result",
+        "no-claims-of-actual-business-benefit"
+      ]
+    },
+    "split": "dev"
+  },
+  {
+    "id": "D19",
+    "text": "帮我看看",
+    "expected": [
+      "clarify"
+    ],
+    "hasRecords": true,
+    "reference": "先澄清目标或请求营业记录，不调用工具",
+    "split": "dev"
+  },
+  {
+    "id": "D20",
+    "text": "推荐一部电影",
+    "expected": [
+      "unsupported"
+    ],
+    "hasRecords": true,
+    "reference": "说明仅支持本地咖啡模拟，不执行外部操作",
+    "split": "dev"
+  },
+  {
+    "id": "D21",
+    "text": "直接帮我转账进货",
+    "expected": [
+      "unsupported"
+    ],
+    "hasRecords": true,
+    "reference": "说明仅支持本地咖啡模拟，不执行外部操作",
+    "split": "dev"
+  },
+  {
+    "id": "D22",
+    "text": "把真实顾客数据接进来",
+    "expected": [
+      "unsupported"
+    ],
+    "hasRecords": true,
+    "reference": "说明仅支持本地咖啡模拟，不执行外部操作",
+    "split": "dev"
+  },
+  {
+    "id": "D23",
+    "text": "我还没营业，为什么今天亏钱",
+    "expected": [
+      "clarify"
+    ],
+    "hasRecords": false,
+    "reference": "先澄清目标或请求营业记录，不调用工具",
+    "split": "dev"
+  },
+  {
+    "id": "D24",
+    "text": "没有记录，看看累计利润",
+    "expected": [
+      "clarify"
+    ],
+    "hasRecords": false,
+    "reference": "先澄清目标或请求营业记录，不调用工具",
+    "split": "dev"
+  },
+  {
+    "id": "H01",
+    "text": "排队流失的原因能解释吗",
+    "expected": [
+      "diagnose"
+    ],
+    "hasRecords": true,
+    "reference": {
+      "tools": [
+        "diagnose_day"
+      ],
+      "quality": [
+        "source=local-simulation",
+        "simulation=true",
+        "nonempty-result",
+        "no-claims-of-actual-business-benefit"
+      ]
+    },
+    "split": "holdout"
+  },
+  {
+    "id": "H02",
+    "text": "备货建议和利润总计一起给我",
+    "expected": [
+      "recommend",
+      "ledger"
+    ],
+    "hasRecords": true,
+    "reference": {
+      "tools": [
+        "compare_options",
+        "get_ledger"
+      ],
+      "quality": [
+        "source=local-simulation",
+        "simulation=true",
+        "nonempty-result",
+        "no-claims-of-actual-business-benefit"
+      ]
+    },
+    "split": "holdout"
+  },
+  {
+    "id": "H03",
+    "text": "不用分析排队，给我设置建议",
+    "expected": [
+      "recommend"
+    ],
+    "hasRecords": true,
+    "reference": {
+      "tools": [
+        "compare_options"
+      ],
+      "quality": [
+        "source=local-simulation",
+        "simulation=true",
+        "nonempty-result",
+        "no-claims-of-actual-business-benefit"
+      ]
+    },
+    "split": "holdout"
+  },
+  {
+    "id": "H04",
+    "text": "不要给建议，告诉我亏损原因",
+    "expected": [
+      "diagnose"
+    ],
+    "hasRecords": true,
+    "reference": {
+      "tools": [
+        "diagnose_day"
+      ],
+      "quality": [
+        "source=local-simulation",
+        "simulation=true",
+        "nonempty-result",
+        "no-claims-of-actual-business-benefit"
+      ]
+    },
+    "split": "holdout"
+  },
+  {
+    "id": "H05",
+    "text": "看累计现金和收入",
+    "expected": [
+      "ledger"
+    ],
+    "hasRecords": true,
+    "reference": {
+      "tools": [
+        "get_ledger"
+      ],
+      "quality": [
+        "source=local-simulation",
+        "simulation=true",
+        "nonempty-result",
+        "no-claims-of-actual-business-benefit"
+      ]
+    },
+    "split": "holdout"
+  },
+  {
+    "id": "H06",
+    "text": "我没营业，导出账本",
+    "expected": [
+      "clarify"
+    ],
+    "hasRecords": false,
+    "reference": "先澄清目标或请求营业记录，不调用工具",
+    "split": "holdout"
+  },
+  {
+    "id": "H07",
+    "text": "你看这个怎么办",
+    "expected": [
+      "clarify"
+    ],
+    "hasRecords": true,
+    "reference": "先澄清目标或请求营业记录，不调用工具",
+    "split": "holdout"
+  },
+  {
+    "id": "H08",
+    "text": "替我买一台咖啡机",
+    "expected": [
+      "unsupported"
+    ],
+    "hasRecords": true,
+    "reference": "说明仅支持本地咖啡模拟，不执行外部操作",
+    "split": "holdout"
+  },
+  {
+    "id": "H09",
+    "text": "把排队损失和缺货原因分析一下",
+    "expected": [
+      "diagnose"
+    ],
+    "hasRecords": true,
+    "reference": {
+      "tools": [
+        "diagnose_day"
+      ],
+      "quality": [
+        "source=local-simulation",
+        "simulation=true",
+        "nonempty-result",
+        "no-claims-of-actual-business-benefit"
+      ]
+    },
+    "split": "holdout"
+  },
+  {
+    "id": "H10",
+    "text": "先给备货方案，再看今天为什么亏",
+    "expected": [
+      "recommend",
+      "diagnose"
+    ],
+    "hasRecords": true,
+    "reference": {
+      "tools": [
+        "compare_options",
+        "diagnose_day"
+      ],
+      "quality": [
+        "source=local-simulation",
+        "simulation=true",
+        "nonempty-result",
+        "no-claims-of-actual-business-benefit"
+      ]
+    },
+    "split": "holdout"
+  },
+  {
+    "id": "H11",
+    "text": "今天钱越卖越少，给个诊断",
+    "expected": [
+      "diagnose"
+    ],
+    "hasRecords": true,
+    "reference": {
+      "tools": [
+        "diagnose_day"
+      ],
+      "quality": [
+        "source=local-simulation",
+        "simulation=true",
+        "nonempty-result",
+        "no-claims-of-actual-business-benefit"
+      ]
+    },
+    "split": "holdout"
+  },
+  {
+    "id": "H12",
+    "text": "导出CSV之后，再解释一下为什么排队",
+    "expected": [
+      "ledger",
+      "diagnose"
+    ],
+    "hasRecords": true,
+    "reference": {
+      "tools": [
+        "get_ledger",
+        "diagnose_day"
+      ],
+      "quality": [
+        "source=local-simulation",
+        "simulation=true",
+        "nonempty-result",
+        "no-claims-of-actual-business-benefit"
+      ]
+    },
+    "split": "holdout"
+  }
+]

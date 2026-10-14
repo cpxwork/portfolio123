@@ -1,0 +1,740 @@
+[
+  {
+    "id": "D13",
+    "split": "dev",
+    "version": "v0",
+    "input": "先分析亏损，再给备货方案",
+    "expected": [
+      "diagnose",
+      "recommend"
+    ],
+    "predicted": [
+      "recommend"
+    ],
+    "routePass": false,
+    "taskPass": false,
+    "qualityPass": true,
+    "endToEnd": false,
+    "failureStage": "intent_route",
+    "outputs": [
+      {
+        "kind": "recommend",
+        "tool": "compare_options",
+        "source": "local-simulation",
+        "simulation": true,
+        "data": {
+          "scope": "same-day single-variable local comparison; not global optimum",
+          "alternatives": [
+            {
+              "label": "多一位店员",
+              "delta": 340,
+              "soldChange": 30,
+              "wasteChange": -30,
+              "decision": {
+                "price": 14,
+                "stock": 120,
+                "staff": 2,
+                "marketing": 40
+              }
+            },
+            {
+              "label": "售价提高 ¥1",
+              "delta": 55,
+              "soldChange": 0,
+              "wasteChange": 0,
+              "decision": {
+                "price": 15,
+                "stock": 120,
+                "staff": 1,
+                "marketing": 40
+              }
+            },
+            {
+              "label": "少备 10 杯",
+              "delta": 50,
+              "soldChange": 0,
+              "wasteChange": -10,
+              "decision": {
+                "price": 14,
+                "stock": 110,
+                "staff": 1,
+                "marketing": 40
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "trace": [
+      {
+        "stage": "input",
+        "case": "D13",
+        "text": "先分析亏损，再给备货方案",
+        "hasRecords": true
+      },
+      {
+        "stage": "route",
+        "version": "v0",
+        "intents": [
+          "recommend"
+        ]
+      },
+      {
+        "stage": "tool_request",
+        "tool": "compare_options"
+      },
+      {
+        "stage": "tool_result",
+        "tool": "compare_options",
+        "data": {
+          "scope": "same-day single-variable local comparison; not global optimum",
+          "alternatives": [
+            {
+              "label": "多一位店员",
+              "delta": 340,
+              "soldChange": 30,
+              "wasteChange": -30,
+              "decision": {
+                "price": 14,
+                "stock": 120,
+                "staff": 2,
+                "marketing": 40
+              }
+            },
+            {
+              "label": "售价提高 ¥1",
+              "delta": 55,
+              "soldChange": 0,
+              "wasteChange": 0,
+              "decision": {
+                "price": 15,
+                "stock": 120,
+                "staff": 1,
+                "marketing": 40
+              }
+            },
+            {
+              "label": "少备 10 杯",
+              "delta": 50,
+              "soldChange": 0,
+              "wasteChange": -10,
+              "decision": {
+                "price": 14,
+                "stock": 110,
+                "staff": 1,
+                "marketing": 40
+              }
+            }
+          ]
+        }
+      },
+      {
+        "stage": "evaluation",
+        "routePass": false,
+        "taskPass": false,
+        "qualityPass": true,
+        "endToEnd": false,
+        "failureStage": "intent_route"
+      }
+    ]
+  },
+  {
+    "id": "D13",
+    "split": "dev",
+    "version": "v1",
+    "input": "先分析亏损，再给备货方案",
+    "expected": [
+      "diagnose",
+      "recommend"
+    ],
+    "predicted": [
+      "diagnose",
+      "recommend"
+    ],
+    "routePass": true,
+    "taskPass": true,
+    "qualityPass": true,
+    "endToEnd": true,
+    "failureStage": null,
+    "outputs": [
+      {
+        "kind": "diagnose",
+        "tool": "diagnose_day",
+        "source": "local-simulation",
+        "simulation": true,
+        "data": {
+          "day": 1,
+          "profit": -50,
+          "queueLost": 32,
+          "stockLost": 0,
+          "waste": 65,
+          "explanation": [
+            "今天有 87 人到店，0 人因价格放弃购买；其余 87 人有购买意愿。",
+            "1 名店员一天可服务 55 杯，32 人因排队流失。",
+            "备货覆盖可服务需求，未发生缺货；剩余 65 杯原料按当日损耗处理。",
+            "成交 55 杯，收入 ¥770，支出 ¥820，当日亏损 ¥50。",
+            "满足率 63.2%，声誉下降 5 点，下次客流会受到影响。"
+          ]
+        }
+      },
+      {
+        "kind": "recommend",
+        "tool": "compare_options",
+        "source": "local-simulation",
+        "simulation": true,
+        "data": {
+          "scope": "same-day single-variable local comparison; not global optimum",
+          "alternatives": [
+            {
+              "label": "多一位店员",
+              "delta": 340,
+              "soldChange": 30,
+              "wasteChange": -30,
+              "decision": {
+                "price": 14,
+                "stock": 120,
+                "staff": 2,
+                "marketing": 40
+              }
+            },
+            {
+              "label": "售价提高 ¥1",
+              "delta": 55,
+              "soldChange": 0,
+              "wasteChange": 0,
+              "decision": {
+                "price": 15,
+                "stock": 120,
+                "staff": 1,
+                "marketing": 40
+              }
+            },
+            {
+              "label": "少备 10 杯",
+              "delta": 50,
+              "soldChange": 0,
+              "wasteChange": -10,
+              "decision": {
+                "price": 14,
+                "stock": 110,
+                "staff": 1,
+                "marketing": 40
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "trace": [
+      {
+        "stage": "input",
+        "case": "D13",
+        "text": "先分析亏损，再给备货方案",
+        "hasRecords": true
+      },
+      {
+        "stage": "route",
+        "version": "v1",
+        "intents": [
+          "diagnose",
+          "recommend"
+        ]
+      },
+      {
+        "stage": "tool_request",
+        "tool": "diagnose_day"
+      },
+      {
+        "stage": "tool_result",
+        "tool": "diagnose_day",
+        "data": {
+          "day": 1,
+          "profit": -50,
+          "queueLost": 32,
+          "stockLost": 0,
+          "waste": 65,
+          "explanation": [
+            "今天有 87 人到店，0 人因价格放弃购买；其余 87 人有购买意愿。",
+            "1 名店员一天可服务 55 杯，32 人因排队流失。",
+            "备货覆盖可服务需求，未发生缺货；剩余 65 杯原料按当日损耗处理。",
+            "成交 55 杯，收入 ¥770，支出 ¥820，当日亏损 ¥50。",
+            "满足率 63.2%，声誉下降 5 点，下次客流会受到影响。"
+          ]
+        }
+      },
+      {
+        "stage": "tool_request",
+        "tool": "compare_options"
+      },
+      {
+        "stage": "tool_result",
+        "tool": "compare_options",
+        "data": {
+          "scope": "same-day single-variable local comparison; not global optimum",
+          "alternatives": [
+            {
+              "label": "多一位店员",
+              "delta": 340,
+              "soldChange": 30,
+              "wasteChange": -30,
+              "decision": {
+                "price": 14,
+                "stock": 120,
+                "staff": 2,
+                "marketing": 40
+              }
+            },
+            {
+              "label": "售价提高 ¥1",
+              "delta": 55,
+              "soldChange": 0,
+              "wasteChange": 0,
+              "decision": {
+                "price": 15,
+                "stock": 120,
+                "staff": 1,
+                "marketing": 40
+              }
+            },
+            {
+              "label": "少备 10 杯",
+              "delta": 50,
+              "soldChange": 0,
+              "wasteChange": -10,
+              "decision": {
+                "price": 14,
+                "stock": 110,
+                "staff": 1,
+                "marketing": 40
+              }
+            }
+          ]
+        }
+      },
+      {
+        "stage": "evaluation",
+        "routePass": true,
+        "taskPass": true,
+        "qualityPass": true,
+        "endToEnd": true,
+        "failureStage": null
+      }
+    ]
+  },
+  {
+    "id": "D16",
+    "split": "dev",
+    "version": "v0",
+    "input": "不用给方案，只分析亏损",
+    "expected": [
+      "diagnose"
+    ],
+    "predicted": [
+      "recommend"
+    ],
+    "routePass": false,
+    "taskPass": false,
+    "qualityPass": true,
+    "endToEnd": false,
+    "failureStage": "intent_route",
+    "outputs": [
+      {
+        "kind": "recommend",
+        "tool": "compare_options",
+        "source": "local-simulation",
+        "simulation": true,
+        "data": {
+          "scope": "same-day single-variable local comparison; not global optimum",
+          "alternatives": [
+            {
+              "label": "多一位店员",
+              "delta": 340,
+              "soldChange": 30,
+              "wasteChange": -30,
+              "decision": {
+                "price": 14,
+                "stock": 120,
+                "staff": 2,
+                "marketing": 40
+              }
+            },
+            {
+              "label": "售价提高 ¥1",
+              "delta": 55,
+              "soldChange": 0,
+              "wasteChange": 0,
+              "decision": {
+                "price": 15,
+                "stock": 120,
+                "staff": 1,
+                "marketing": 40
+              }
+            },
+            {
+              "label": "少备 10 杯",
+              "delta": 50,
+              "soldChange": 0,
+              "wasteChange": -10,
+              "decision": {
+                "price": 14,
+                "stock": 110,
+                "staff": 1,
+                "marketing": 40
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "trace": [
+      {
+        "stage": "input",
+        "case": "D16",
+        "text": "不用给方案，只分析亏损",
+        "hasRecords": true
+      },
+      {
+        "stage": "route",
+        "version": "v0",
+        "intents": [
+          "recommend"
+        ]
+      },
+      {
+        "stage": "tool_request",
+        "tool": "compare_options"
+      },
+      {
+        "stage": "tool_result",
+        "tool": "compare_options",
+        "data": {
+          "scope": "same-day single-variable local comparison; not global optimum",
+          "alternatives": [
+            {
+              "label": "多一位店员",
+              "delta": 340,
+              "soldChange": 30,
+              "wasteChange": -30,
+              "decision": {
+                "price": 14,
+                "stock": 120,
+                "staff": 2,
+                "marketing": 40
+              }
+            },
+            {
+              "label": "售价提高 ¥1",
+              "delta": 55,
+              "soldChange": 0,
+              "wasteChange": 0,
+              "decision": {
+                "price": 15,
+                "stock": 120,
+                "staff": 1,
+                "marketing": 40
+              }
+            },
+            {
+              "label": "少备 10 杯",
+              "delta": 50,
+              "soldChange": 0,
+              "wasteChange": -10,
+              "decision": {
+                "price": 14,
+                "stock": 110,
+                "staff": 1,
+                "marketing": 40
+              }
+            }
+          ]
+        }
+      },
+      {
+        "stage": "evaluation",
+        "routePass": false,
+        "taskPass": false,
+        "qualityPass": true,
+        "endToEnd": false,
+        "failureStage": "intent_route"
+      }
+    ]
+  },
+  {
+    "id": "D16",
+    "split": "dev",
+    "version": "v1",
+    "input": "不用给方案，只分析亏损",
+    "expected": [
+      "diagnose"
+    ],
+    "predicted": [
+      "diagnose"
+    ],
+    "routePass": true,
+    "taskPass": true,
+    "qualityPass": true,
+    "endToEnd": true,
+    "failureStage": null,
+    "outputs": [
+      {
+        "kind": "diagnose",
+        "tool": "diagnose_day",
+        "source": "local-simulation",
+        "simulation": true,
+        "data": {
+          "day": 1,
+          "profit": -50,
+          "queueLost": 32,
+          "stockLost": 0,
+          "waste": 65,
+          "explanation": [
+            "今天有 87 人到店，0 人因价格放弃购买；其余 87 人有购买意愿。",
+            "1 名店员一天可服务 55 杯，32 人因排队流失。",
+            "备货覆盖可服务需求，未发生缺货；剩余 65 杯原料按当日损耗处理。",
+            "成交 55 杯，收入 ¥770，支出 ¥820，当日亏损 ¥50。",
+            "满足率 63.2%，声誉下降 5 点，下次客流会受到影响。"
+          ]
+        }
+      }
+    ],
+    "trace": [
+      {
+        "stage": "input",
+        "case": "D16",
+        "text": "不用给方案，只分析亏损",
+        "hasRecords": true
+      },
+      {
+        "stage": "route",
+        "version": "v1",
+        "intents": [
+          "diagnose"
+        ]
+      },
+      {
+        "stage": "tool_request",
+        "tool": "diagnose_day"
+      },
+      {
+        "stage": "tool_result",
+        "tool": "diagnose_day",
+        "data": {
+          "day": 1,
+          "profit": -50,
+          "queueLost": 32,
+          "stockLost": 0,
+          "waste": 65,
+          "explanation": [
+            "今天有 87 人到店，0 人因价格放弃购买；其余 87 人有购买意愿。",
+            "1 名店员一天可服务 55 杯，32 人因排队流失。",
+            "备货覆盖可服务需求，未发生缺货；剩余 65 杯原料按当日损耗处理。",
+            "成交 55 杯，收入 ¥770，支出 ¥820，当日亏损 ¥50。",
+            "满足率 63.2%，声誉下降 5 点，下次客流会受到影响。"
+          ]
+        }
+      },
+      {
+        "stage": "evaluation",
+        "routePass": true,
+        "taskPass": true,
+        "qualityPass": true,
+        "endToEnd": true,
+        "failureStage": null
+      }
+    ]
+  },
+  {
+    "id": "D23",
+    "split": "dev",
+    "version": "v0",
+    "input": "我还没营业，为什么今天亏钱",
+    "expected": [
+      "clarify"
+    ],
+    "predicted": [
+      "diagnose"
+    ],
+    "routePass": false,
+    "taskPass": false,
+    "qualityPass": false,
+    "endToEnd": false,
+    "failureStage": "intent_route",
+    "outputs": [],
+    "trace": [
+      {
+        "stage": "input",
+        "case": "D23",
+        "text": "我还没营业，为什么今天亏钱",
+        "hasRecords": false
+      },
+      {
+        "stage": "route",
+        "version": "v0",
+        "intents": [
+          "diagnose"
+        ]
+      },
+      {
+        "stage": "tool_request",
+        "tool": "diagnose_day"
+      },
+      {
+        "stage": "tool_error",
+        "tool": "diagnose_day",
+        "error": "missing_records"
+      },
+      {
+        "stage": "evaluation",
+        "routePass": false,
+        "taskPass": false,
+        "qualityPass": false,
+        "endToEnd": false,
+        "failureStage": "intent_route"
+      }
+    ]
+  },
+  {
+    "id": "D23",
+    "split": "dev",
+    "version": "v1",
+    "input": "我还没营业，为什么今天亏钱",
+    "expected": [
+      "clarify"
+    ],
+    "predicted": [
+      "clarify"
+    ],
+    "routePass": true,
+    "taskPass": true,
+    "qualityPass": true,
+    "endToEnd": true,
+    "failureStage": null,
+    "outputs": [
+      {
+        "kind": "clarify",
+        "message": "请补充要解决的目标或营业记录。",
+        "simulation": true,
+        "source": "local-simulation"
+      }
+    ],
+    "trace": [
+      {
+        "stage": "input",
+        "case": "D23",
+        "text": "我还没营业，为什么今天亏钱",
+        "hasRecords": false
+      },
+      {
+        "stage": "route",
+        "version": "v1",
+        "intents": [
+          "clarify"
+        ]
+      },
+      {
+        "stage": "evaluation",
+        "routePass": true,
+        "taskPass": true,
+        "qualityPass": true,
+        "endToEnd": true,
+        "failureStage": null
+      }
+    ]
+  },
+  {
+    "id": "H11",
+    "split": "holdout",
+    "version": "v0",
+    "input": "今天钱越卖越少，给个诊断",
+    "expected": [
+      "diagnose"
+    ],
+    "predicted": [
+      "unsupported"
+    ],
+    "routePass": false,
+    "taskPass": false,
+    "qualityPass": true,
+    "endToEnd": false,
+    "failureStage": "intent_route",
+    "outputs": [
+      {
+        "kind": "unsupported",
+        "message": "此原型只支持咖啡模拟账本、诊断和方案对比。",
+        "simulation": true,
+        "source": "local-simulation"
+      }
+    ],
+    "trace": [
+      {
+        "stage": "input",
+        "case": "H11",
+        "text": "今天钱越卖越少，给个诊断",
+        "hasRecords": true
+      },
+      {
+        "stage": "route",
+        "version": "v0",
+        "intents": [
+          "unsupported"
+        ]
+      },
+      {
+        "stage": "evaluation",
+        "routePass": false,
+        "taskPass": false,
+        "qualityPass": true,
+        "endToEnd": false,
+        "failureStage": "intent_route"
+      }
+    ]
+  },
+  {
+    "id": "H11",
+    "split": "holdout",
+    "version": "v1",
+    "input": "今天钱越卖越少，给个诊断",
+    "expected": [
+      "diagnose"
+    ],
+    "predicted": [
+      "clarify"
+    ],
+    "routePass": false,
+    "taskPass": false,
+    "qualityPass": true,
+    "endToEnd": false,
+    "failureStage": "intent_route",
+    "outputs": [
+      {
+        "kind": "clarify",
+        "message": "请补充要解决的目标或营业记录。",
+        "simulation": true,
+        "source": "local-simulation"
+      }
+    ],
+    "trace": [
+      {
+        "stage": "input",
+        "case": "H11",
+        "text": "今天钱越卖越少，给个诊断",
+        "hasRecords": true
+      },
+      {
+        "stage": "route",
+        "version": "v1",
+        "intents": [
+          "clarify"
+        ]
+      },
+      {
+        "stage": "evaluation",
+        "routePass": false,
+        "taskPass": false,
+        "qualityPass": true,
+        "endToEnd": false,
+        "failureStage": "intent_route"
+      }
+    ]
+  }
+]

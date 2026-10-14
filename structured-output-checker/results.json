@@ -1,0 +1,156 @@
+{
+  "exercise": "论文摘要结构化输出核验：离线学习练习",
+  "learning_date": "2026-10-12",
+  "evaluated_at_utc": "2026-10-14T05:37:01+00:00",
+  "provenance": "本次 AI 辅助新增练习；所有输出由人工构造；所有论文和 mock:// 来源均为模拟。",
+  "boundary": "人工构造输出；无真实模型调用；无公网事实核验；预期一致率不是模型成功率。",
+  "summary": {
+    "total_cases": 8,
+    "rule_pass_cases": 2,
+    "rule_reject_cases": 6,
+    "expected_match_cases": 8,
+    "expected_match_rate": 1.0
+  },
+  "cases": [
+    {
+      "case_id": "PASS-01",
+      "description": "3 条合法字段、日期及输入来源",
+      "expected_rule_pass": true,
+      "actual_rule_pass": true,
+      "expected_issue_codes": [],
+      "actual_issue_codes": [],
+      "matches_expected": true,
+      "issues": []
+    },
+    {
+      "case_id": "PASS-02",
+      "description": "另一组 3 条合法输入来源与不同顺序",
+      "expected_rule_pass": true,
+      "actual_rule_pass": true,
+      "expected_issue_codes": [],
+      "actual_issue_codes": [],
+      "matches_expected": true,
+      "issues": []
+    },
+    {
+      "case_id": "FAIL-01",
+      "description": "JSON 尾随逗号导致解析失败",
+      "expected_rule_pass": false,
+      "actual_rule_pass": false,
+      "expected_issue_codes": [
+        "json_parse_failed"
+      ],
+      "actual_issue_codes": [
+        "json_parse_failed"
+      ],
+      "matches_expected": true,
+      "issues": [
+        {
+          "code": "json_parse_failed",
+          "location": "$",
+          "message": "JSON 解析失败（行 1，列 15）"
+        }
+      ]
+    },
+    {
+      "case_id": "FAIL-02",
+      "description": "第二条缺少 summary 必填字段",
+      "expected_rule_pass": false,
+      "actual_rule_pass": false,
+      "expected_issue_codes": [
+        "required_field_missing"
+      ],
+      "actual_issue_codes": [
+        "required_field_missing"
+      ],
+      "matches_expected": true,
+      "issues": [
+        {
+          "code": "required_field_missing",
+          "location": "$.papers[1].summary",
+          "message": "必填字段缺失、为空或不是字符串"
+        }
+      ]
+    },
+    {
+      "case_id": "FAIL-03",
+      "description": "只输出 2 条，少于最少 3 条",
+      "expected_rule_pass": false,
+      "actual_rule_pass": false,
+      "expected_issue_codes": [
+        "insufficient_count"
+      ],
+      "actual_issue_codes": [
+        "insufficient_count"
+      ],
+      "matches_expected": true,
+      "issues": [
+        {
+          "code": "insufficient_count",
+          "location": "$.papers",
+          "message": "条目数 2，任务至少要求 3"
+        }
+      ]
+    },
+    {
+      "case_id": "FAIL-04",
+      "description": "第二条日期超出任务范围",
+      "expected_rule_pass": false,
+      "actual_rule_pass": false,
+      "expected_issue_codes": [
+        "date_out_of_range"
+      ],
+      "actual_issue_codes": [
+        "date_out_of_range"
+      ],
+      "matches_expected": true,
+      "issues": [
+        {
+          "code": "date_out_of_range",
+          "location": "$.papers[1].published_date",
+          "message": "日期超出任务指定范围"
+        }
+      ]
+    },
+    {
+      "case_id": "FAIL-05",
+      "description": "第三条重复第一条的来源",
+      "expected_rule_pass": false,
+      "actual_rule_pass": false,
+      "expected_issue_codes": [
+        "duplicate_source"
+      ],
+      "actual_issue_codes": [
+        "duplicate_source"
+      ],
+      "matches_expected": true,
+      "issues": [
+        {
+          "code": "duplicate_source",
+          "location": "$.papers[2].source_id",
+          "message": "同一来源被重复计为多个条目"
+        }
+      ]
+    },
+    {
+      "case_id": "FAIL-06",
+      "description": "第二条引用地址不属于输入来源",
+      "expected_rule_pass": false,
+      "actual_rule_pass": false,
+      "expected_issue_codes": [
+        "citation_not_provided"
+      ],
+      "actual_issue_codes": [
+        "citation_not_provided"
+      ],
+      "matches_expected": true,
+      "issues": [
+        {
+          "code": "citation_not_provided",
+          "location": "$.papers[1].citation_url",
+          "message": "引用地址不属于输入提供的来源地址"
+        }
+      ]
+    }
+  ]
+}

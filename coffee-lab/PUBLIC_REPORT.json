@@ -1,0 +1,17 @@
+{
+  "date": "2026-10-14",
+  "url": "https://frost-guard-d3gw4cry5916d32c4-1503361620.tcloudbaseapp.com/coffee-lab/",
+  "hosting": "Tencent CloudBase CLI 3.8.6",
+  "remoteFilesVerified": true,
+  "firstVisitNotice": true,
+  "checks": [
+    "腾讯云首次访问提示确认后加载",
+    "页面与全部脚本加载",
+    "首次结算与客流反馈",
+    "公网刷新本机存档恢复",
+    "同种子重开",
+    "14天结束按钮阻断",
+    "无脚本错误"
+  ],
+  "passed": true
+}

@@ -1,0 +1,76 @@
+{
+  "date": "2026-10-14",
+  "scope": "AI-assisted learning prototype; hand-authored cases; offline deterministic routing; no LLM/API or online user data",
+  "n": 36,
+  "dev": 24,
+  "holdout": 12,
+  "note": "Development and holdout are both authored during this exercise. Holdout is kept separate from router changes, but not an independently collected or blind business benchmark. Rates are sample-level rule/tool outcomes, not model accuracy.",
+  "summaries": [
+    {
+      "version": "v0",
+      "split": "dev",
+      "n": 24,
+      "routePassed": 15,
+      "taskPassed": 15,
+      "qualityPassed": 23,
+      "endToEndPassed": 15,
+      "routeRate": 0.625,
+      "taskRate": 0.625,
+      "qualityRate": 0.9583333333333334,
+      "endToEndRate": 0.625
+    },
+    {
+      "version": "v0",
+      "split": "holdout",
+      "n": 12,
+      "routePassed": 5,
+      "taskPassed": 5,
+      "qualityPassed": 12,
+      "endToEndPassed": 5,
+      "routeRate": 0.4166666666666667,
+      "taskRate": 0.4166666666666667,
+      "qualityRate": 1,
+      "endToEndRate": 0.4166666666666667
+    },
+    {
+      "version": "v1",
+      "split": "dev",
+      "n": 24,
+      "routePassed": 24,
+      "taskPassed": 24,
+      "qualityPassed": 24,
+      "endToEndPassed": 24,
+      "routeRate": 1,
+      "taskRate": 1,
+      "qualityRate": 1,
+      "endToEndRate": 1
+    },
+    {
+      "version": "v1",
+      "split": "holdout",
+      "n": 12,
+      "routePassed": 11,
+      "taskPassed": 11,
+      "qualityPassed": 12,
+      "endToEndPassed": 11,
+      "routeRate": 0.9166666666666666,
+      "taskRate": 0.9166666666666666,
+      "qualityRate": 1,
+      "endToEndRate": 0.9166666666666666
+    }
+  ],
+  "remainingFailures": [
+    {
+      "id": "H11",
+      "input": "今天钱越卖越少，给个诊断",
+      "predicted": [
+        "clarify"
+      ],
+      "expected": [
+        "diagnose"
+      ],
+      "failureStage": "intent_route",
+      "split": "holdout"
+    }
+  ]
+}

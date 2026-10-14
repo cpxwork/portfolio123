@@ -1,0 +1,91 @@
+{
+  "project": "街角咖啡经营实验室",
+  "date": "2026-10-13",
+  "scope": "纯软件模型检查；不是真实用户研究或商业经营实验",
+  "gridCases": 600,
+  "total": 20,
+  "passed": 20,
+  "failed": 0,
+  "checks": [
+    {
+      "name": "种子上下界及无效种子拒绝",
+      "passed": true
+    },
+    {
+      "name": "同种子同运营日事件完全一致",
+      "passed": true
+    },
+    {
+      "name": "不同策略不会改写同种子环境时间轴",
+      "passed": true
+    },
+    {
+      "name": "运营日范围校验",
+      "passed": true
+    },
+    {
+      "name": "非法决策和空字段拒绝",
+      "passed": true
+    },
+    {
+      "name": "决策上下边界可计算",
+      "passed": true
+    },
+    {
+      "name": "客流去向互斥并守恒",
+      "passed": true
+    },
+    {
+      "name": "成交不超过意愿库存和服务能力",
+      "passed": true
+    },
+    {
+      "name": "原料售出与损耗守恒",
+      "passed": true
+    },
+    {
+      "name": "成本逐项与总成本一致",
+      "passed": true
+    },
+    {
+      "name": "收入及利润算式一致",
+      "passed": true
+    },
+    {
+      "name": "现金变化与利润一致",
+      "passed": true
+    },
+    {
+      "name": "声誉与满足率边界",
+      "passed": true
+    },
+    {
+      "name": "预算不足时不修改状态",
+      "passed": true
+    },
+    {
+      "name": "一次营业只增加一天和一条记录",
+      "passed": true
+    },
+    {
+      "name": "相同决策序列可复现且14天后拒绝结算",
+      "passed": true
+    },
+    {
+      "name": "累计利润等于现金与逐日账目",
+      "passed": true
+    },
+    {
+      "name": "导出JSON按决策回放得到相同状态",
+      "passed": true
+    },
+    {
+      "name": "不支持版本和超14天导入拒绝",
+      "passed": true
+    },
+    {
+      "name": "CSV记录条数及关键字段对应",
+      "passed": true
+    }
+  ]
+}
