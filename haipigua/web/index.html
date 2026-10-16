@@ -12,6 +12,7 @@
   <script defer src="ramble.js"></script>
   <script defer src="pocket.js"></script>
   <script defer src="studio-core.js"></script>
+  <script defer src="model-client.js"></script>
   <script defer src="studio.js"></script>
 </head>
 <body>
@@ -37,12 +38,13 @@
           </div>
           <div class="stage-caption" id="stage-caption" aria-live="polite">皮皮：我听着呢，想到哪儿就说到哪儿。</div>
           <div class="relay-map" aria-label="接力流程">接住想法 <span>↗ 留出时间 ↘<br>↘ 探索创意 ↗</span> 带回收获 <b>↺</b></div>
-          <p class="local-label"><span></span> 本机体验 · 真实模型待接入 <button data-action="capabilities" aria-label="查看当前功能说明">?</button></p>
+          <p class="local-label"><span id="connection-dot"></span><button class="connection-button" id="connection-button" data-action="model-connection">检测模型服务…</button><button data-action="capabilities" aria-label="查看当前功能说明">?</button></p>
         </aside>
         <div class="conversation-area">
           <div class="conversation-heading"><div><span class="live-dot"></span>皮皮和朋友们<span class="heading-sub">你说一次，我们一起接住。</span></div><button class="text-button" data-action="bottom" aria-label="跳到最新对话">最新 ↓</button></div>
           <div class="thread" id="thread" aria-label="小窝对话记录"></div>
           <div class="composer-wrap" id="composer-anchor">
+            <div id="model-message" class="model-message" role="status" hidden></div>
             <div class="suggestions" id="suggestions"><button data-sample="learning">想学一点</button><button data-sample="creative">有个大脑洞</button><button data-action="feedback">带回今天的收获</button></div>
             <div class="reward-strip" id="reward-strip" hidden><button data-action="rewards" id="reward-points">✦ 0 成长值</button><span>每一点尝试，都值得被看见。<small>演示待核验 · 不抵现</small></span></div>
             <form id="composer-form" class="composer-form">
@@ -50,7 +52,7 @@
               <textarea id="composer" maxlength="8000" rows="3" placeholder="我想学跳舞，明天中午十二点试十分钟吧。还有，我想做一个给流浪小猫找家的小网站……"></textarea>
               <div class="composer-tools"><button type="button" id="dictate" class="dictate" aria-pressed="false"><span aria-hidden="true">♩</span>说给皮皮听</button><span id="draft-count">0 / 8000</span><button type="submit" class="send" id="send-button">递给皮皮 <span aria-hidden="true">↗</span></button></div>
             </form>
-            <p class="composer-hint" id="speech-status">不用先分类。时间听不清时，我们会再问你。Shift + Enter 换行。</p>
+            <p class="composer-hint" id="speech-status">不用先分类。模型模式会将本次文字和近期相关记录发送给智谱；密钥只留在本机服务。</p>
           </div>
         </div>
       </section>

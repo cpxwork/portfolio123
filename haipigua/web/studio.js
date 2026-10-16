@@ -11,6 +11,7 @@
   };
   let view = 'chat', activeRobot = 1, olderNotes = false, recognition = null, recording = false;
   let pendingVideo = null, videoURL = null, bugTimer = null, bugTask = null;
+  let modelHealth = {ready: false}, useModel = false, sending = false, modelValidated = false, feedbackPending = false;
   const seenReminders = new Set();
   const state = () => app.state;
   const text = value => esc(value).replace(/\n/g, '<br>');
@@ -25,7 +26,12 @@
   }
   function saveNotice() { if (app.storageError) toast(app.storageError, true); }
   function resources(items) {
-    return `<div class="resource-links">${(items || []).filter(item => /^https:\/\/(search\.bilibili\.com|www\.bing\.com)\//.test(item.url || '')).map(item => `<a href="${esc(item.url)}" target="_blank" rel="noopener noreferrer">${esc(item.label)} ↗</a>`).join('')}</div>`;
+    return `<div class="resource-links">${(items || []).filter(item => /^https:\/\/(search\.bilibili\.com|www\.bing\.com|docs\.python\.org|developer\.mozilla\.org)\//.test(item.url || '')).map(item => `<a href="${esc(item.url)}" target="_blank" rel="noopener noreferrer">${esc(item.label)} ↗</a>`).join('')}</div>`;
+  }
+  function modelReceipt(note) {
+    if (note.source !== 'model') return '';
+    const calls = (note.trace || []).filter(t => t.kind === 'model');
+    return `<details class="model-receipt"><summary>真实模型接力 · ${calls.length} 次调用</summary><p class="small">这是执行记录，不是模型内部思考。API 返回成功后，再经过本地日期、关联与冲突校验写入。</p>${(note.trace || []).slice(0, 24).map(t => `<p class="small"><strong>${esc(t.agent)}</strong> · ${esc(t.action || t.tool)} · ${esc(t.status)}${t.model ? ' · ' + esc(t.model) : ''}${Number.isFinite(t.durationMs) ? ' · ' + (t.durationMs / 1000).toFixed(1) + '秒' : ''}<br>${text(t.detail || '')}</p>`).join('')}${note.usage ? `<p class="small">输入 ${Number(note.usage.inputTokens) || 0} tokens · 输出 ${Number(note.usage.outputTokens) || 0} tokens</p>` : ''}</details>`;
   }
   function bubble(id, content, caption = '') {
     return `<div class="message speaker-${id}"><div class="speaker-art">${sprite(id)}</div><div class="bubble-wrap"><div class="speaker-label"><strong>${robots[id].name}</strong>${caption || robots[id].role}</div><div class="bubble">${content}</div></div></div>`;
@@ -40,16 +46,18 @@
     const tasks = (note.taskIds || []).map(id => state().tasks.find(t => t.id === id)).filter(Boolean);
     const feedback = state().feedback.find(f => f.id === note.feedbackId) || [...state().feedback].reverse().find(f => note.agents.includes(4) && (note.taskIds || []).includes(f.taskId) && f.createdAt === note.createdAt);
     if (feedback) {
-      return bubble(4, feedbackBubble(feedback)) + '<div class="route-line">回回把行动结果交回皮皮</div>' + bubble(1, `<p>收好了：${esc(feedback.taskTitle)}，${feedback.minutes} 分钟。下次安排会参考这条反馈，之前的喜欢也留着。</p><p class="small">你的解释是记录，不是性格定论。想换一个兴趣也可以继续说。</p>`, '接住反馈，准备下一轮');
+      return bubble(4, feedbackBubble(feedback) + modelReceipt(note)) + '<div class="route-line">回回把行动结果交回皮皮</div>' + bubble(1, `<p>收好了：${esc(feedback.taskTitle)}，${feedback.minutes} 分钟。下次安排会参考这条反馈，之前的喜欢也留着。</p><p class="small">你的解释是记录，不是性格定论。想换一个兴趣也可以继续说。</p>`, '接住反馈，准备下一轮');
     }
     const learning = ideas.filter(i => i.type === 'skill'), creative = ideas.filter(i => i.type === 'creative');
-    let content = '<p>' + (ideas.length ? `从这段话里接到了 ${ideas.length} 个兴趣线索。` : '这段原话已经收进口袋。') + (learning.length ? '学习的部分交给滴答，' : '') + (creative.length ? '脑洞的部分交给啵啵，' : '') + '不用你逐个搬过去。</p>';
+    const understanding = note.understanding;
+    let content = understanding?.goal ? `<p><strong>我听到的主要目标：</strong>${text(understanding.goal)}</p>${(understanding.facts || []).length ? `<p>你已经告诉我的：</p><ul>${understanding.facts.map(f => `<li>${text(f.text)}</li>`).join('')}</ul>` : ''}${(understanding.constraints || []).length ? `<p>安排时要顾及：</p><ul>${understanding.constraints.map(f => `<li>${text(f.text)}</li>`).join('')}</ul>` : ''}<p class="small">这是皮皮对原话的理解，可以直接纠正；不会自动变成永久确认记忆。</p>` : '<p>' + (ideas.length ? `这段话关联到 ${ideas.length} 个目标或兴趣。` : '这段原话已经收进口袋。') + (learning.length ? '学习与准备交给滴答，' : '') + (creative.length ? '脑洞交给啵啵，' : '') + '不用你逐个搬过去。</p>';
     if (note.clarification) content += `<p><strong>有一处想问清楚：</strong>${text(note.clarification)}</p>`;
-    content += `<details><summary>看看这次怎么理解的</summary><p>${text(note.reply)}</p><p class="small">本地规则处理。复杂表达可能漏分或分错，直接在对话里更正即可。</p></details>`;
+    if (understanding?.acknowledgement) content = `<p>${text(understanding.acknowledgement)}</p>` + content;
+    content += `<details><summary>看看这次怎样记录的</summary><p>${text(note.reply)}</p><p class="small">${note.source === 'model' ? '模型理解后，经过本地业务校验。理解有误时直接更正。' : '本地规则体验，没有调用模型。复杂表达可能漏分或分错。'}</p></details>` + modelReceipt(note);
     let result = bubble(1, content);
     if (note.agents.includes(2)) {
       const learningTasks = tasks.filter(t => t.kind !== 'experiment');
-      let line = learningTasks.length ? learningTasks.map(t => `<p><strong>${esc(t.title)}</strong><br><span class="time-sticker">${date(t.date)} ${esc(t.start)}—${esc(t.end)} · ${t.duration} 分钟</span></p><p>${text(t.description || '')}</p>${resources(t.resources)}${action('task-detail', '看看这一步 ↗', t.id)}`).join('<hr>') : learning.length ? `<p>${learning.map(i => '“' + esc(i.title) + '”').join('、')}我接住啦。告诉我哪一天、几点开始就好；有基础或最近很累，也一起告诉我。</p>` : '<p>你的时间与偏好已经交给我处理。具体记录在上面的理解详情里；遇到撞期，我会先问你。</p>';
+      let line = learningTasks.length ? learningTasks.map(t => `<p><strong>${esc(t.title)}</strong><br><span class="time-sticker">${date(t.date)} ${esc(t.start)}—${esc(t.end)} · ${t.duration} 分钟</span></p><p>${text(t.description || '')}</p>${t.successCriterion ? `<p><strong>留下什么算有收获：</strong>${text(t.successCriterion)}</p>` : ''}${resources(t.resources)}${action('task-detail', '看看这一步 ↗', t.id)}`).join('<hr>') : learning.length ? learning.map(i => i.aiPlan ? `<p><strong>${esc(i.aiPlan.title || i.title)}</strong></p><ol>${i.aiPlan.steps.map(s => `<li><strong>${esc(s.title)}</strong>：${text(s.description)}</li>`).join('')}</ol><p><strong>具体产出：</strong>${text(i.aiPlan.successCriterion)}</p><p class="small">为什么先做这一步：${text(i.aiPlan.rationale)}<br>还没有占用日程。确认空闲后再约时间。</p>${resources(i.aiPlan.resources)}` : `<p>“${esc(i.title)}”我接住啦。日期和时间还没确定，我们先把下一小步问清楚。</p>`).join('<hr>') : '<p>你的时间与偏好已经交给我处理。具体记录在上面的理解详情里；遇到撞期，我会先问你。</p>';
       if (learningTasks.length) line += '<p class="small">这里展示当前保存的安排。教程按钮是搜索入口，还没有替你筛选或核验视频。</p>';
       result += '<div class="route-line">皮皮 → 滴答 · 学习与时间</div>' + bubble(2, line);
     }
@@ -90,7 +98,7 @@
   }
   function renderMemory() {
     const p = state().studio.preference;
-    $('#memory-view').innerHTML = `<div class="page-title">${sprite(1)}<div><p class="eyebrow">YOUR LITTLE POCKET</p><h1>记住你说过的，<br>也听你随时改口。</h1><p>记忆由你确认。我们会参考具体偏好，不给你贴性格标签。</p></div></div><div class="memory-layout"><div><h2>你亲自确认的记忆</h2><p>比如“工作日晚上容易累”“我更喜欢先跟做，再看理论”。自由文字先作为记录；下面的安排偏好会直接影响本地计划。</p><div>${state().studio.facts.map(f => `<div class="fact"><p>${text(f.text)}</p><button data-action="edit-fact" data-id="${esc(f.id)}">修改</button><button data-action="forget" data-id="${esc(f.id)}">忘掉</button></div>`).join('') || '<p class="empty">还没给你下任何定义。告诉我们一件安排时该记住的小事吧。</p>'}</div><button class="secondary" data-action="new-fact">＋ 放进一条记忆</button><h2 class="section-label">从真实反馈里认识你</h2>${state().feedback.slice(-5).reverse().map(f => `<p class="hint">${date(localDay(f.createdAt))} · 你自报“${esc(f.taskTitle)}”${f.minutes} 分钟，${({hard: '觉得有点难', easy: '觉得挺轻松', right: '难度刚好'}[f.feeling] || '留下一次反馈')}。${f.reason ? '<br>你的解释：' + text(f.reason) : ''}</p>`).join('') || '<p>行动反馈会留在这里。我们根据具体经历调整，而不是猜测你的性格。</p>'}</div><div><h2>安排时，先这样照顾我</h2><form class="pref-form" id="preference-form"><div class="field"><label for="pref-duration">一开始，我通常愿意试多久？</label><select id="pref-duration" name="duration">${[5, 10, 15, 20, 30].map(n => `<option value="${n}" ${p.duration === n ? 'selected' : ''}>${n} 分钟</option>`).join('')}</select></div><div class="field"><label for="pref-energy">默认精力</label><select id="pref-energy" name="energy"><option value="low" ${p.energy === 'low' ? 'selected' : ''}>最近容易累，轻一点</option><option value="medium" ${p.energy === 'medium' ? 'selected' : ''}>普通状态，留一点空白</option><option value="high" ${p.energy === 'high' ? 'selected' : ''}>精力不错，可以多试一点</option></select></div><div class="field"><label for="pref-level">新兴趣默认从哪里开始？</label><select id="pref-level" name="level"><option value="beginner" ${p.level === 'beginner' ? 'selected' : ''}>先按小白来</option><option value="some" ${p.level === 'some' ? 'selected' : ''}>通常有一点基础</option><option value="advanced" ${p.level === 'advanced' ? 'selected' : ''}>偏向深入一点</option></select></div><button class="primary" type="submit">记住这些偏好</button></form><p>对话里本次说的时间、基础和精力优先。修改偏好会用于后续新安排。</p><h2 class="section-label">把记录握在自己手里</h2><p>目前仅保存在这个浏览器，清理浏览器会丢失。跨设备长期记忆需要同伴接账号与数据库。导出备份不包含视频文件。</p><div class="actions"><button class="secondary" data-action="export">导出文字记录</button><button class="secondary" data-action="import">导入备份</button></div></div></div><details><summary class="section-label">所有兴趣都还在 · ${state().ideas.length}</summary>${state().ideas.map(i => `<div class="topic-row"><span>${esc(i.title)}<small>${i.type === 'skill' ? '滴答接住的学习' : i.type === 'creative' ? '啵啵接住的创意' : '先收藏的碎碎念'}</small></span><button data-action="continue" data-id="${esc(i.id)}">接着聊 ↗</button></div>`).join('') || '<p class="empty">想到什么，先说给皮皮听。</p>'}</details>`;
+    $('#memory-view').innerHTML = `<div class="page-title">${sprite(1)}<div><p class="eyebrow">YOUR LITTLE POCKET</p><h1>记住你说过的，<br>也听你随时改口。</h1><p>记忆由你确认。我们会参考具体偏好，不给你贴性格标签。</p></div></div><div class="memory-layout"><div><h2>你亲自确认的记忆</h2><p>比如“工作日晚上容易累”“我更喜欢先跟做，再看理论”。自由文字先作为记录；下面的安排偏好会直接影响本地计划。</p><div>${state().studio.facts.map(f => `<div class="fact"><p>${text(f.text)}</p><button data-action="edit-fact" data-id="${esc(f.id)}">修改</button><button data-action="forget" data-id="${esc(f.id)}">忘掉</button></div>`).join('') || '<p class="empty">还没给你下任何定义。告诉我们一件安排时该记住的小事吧。</p>'}</div><button class="secondary" data-action="new-fact">＋ 放进一条记忆</button><h2 class="section-label">从真实反馈里认识你</h2>${state().feedback.slice(-5).reverse().map(f => `<p class="hint">${date(localDay(f.createdAt))} · 你自报“${esc(f.taskTitle)}”${f.minutes} 分钟，${({hard: '觉得有点难', easy: '觉得挺轻松', right: '难度刚好'}[f.feeling] || '留下一次反馈')}。${f.reason ? '<br>你的解释：' + text(f.reason) : ''}</p>`).join('') || '<p>行动反馈会留在这里。我们根据具体经历调整，而不是猜测你的性格。</p>'}</div><div><h2>安排时，先这样照顾我</h2><form class="pref-form" id="preference-form"><div class="field"><label for="pref-duration">一开始，我通常愿意试多久？</label><select id="pref-duration" name="duration">${[5, 10, 15, 20, 30].map(n => `<option value="${n}" ${p.duration === n ? 'selected' : ''}>${n} 分钟</option>`).join('')}</select></div><div class="field"><label for="pref-energy">默认精力</label><select id="pref-energy" name="energy"><option value="low" ${p.energy === 'low' ? 'selected' : ''}>最近容易累，轻一点</option><option value="medium" ${p.energy === 'medium' ? 'selected' : ''}>普通状态，留一点空白</option><option value="high" ${p.energy === 'high' ? 'selected' : ''}>精力不错，可以多试一点</option></select></div><div class="field"><label for="pref-level">新兴趣默认从哪里开始？</label><select id="pref-level" name="level"><option value="beginner" ${p.level === 'beginner' ? 'selected' : ''}>先按小白来</option><option value="some" ${p.level === 'some' ? 'selected' : ''}>通常有一点基础</option><option value="advanced" ${p.level === 'advanced' ? 'selected' : ''}>偏向深入一点</option></select></div><button class="primary" type="submit">记住这些偏好</button></form><p>对话里本次说的时间、基础和精力优先。修改偏好会用于后续新安排。</p><h2 class="section-label">把记录握在自己手里</h2><p>目前仅保存在这个浏览器，清理浏览器会丢失。跨设备长期记忆还需要连接账号与数据库。导出备份不包含视频文件。</p><div class="actions"><button class="secondary" data-action="export">导出文字记录</button><button class="secondary" data-action="import">导入备份</button></div></div></div><details><summary class="section-label">所有兴趣都还在 · ${state().ideas.length}</summary>${state().ideas.map(i => `<div class="topic-row"><span>${esc(i.title)}<small>${i.type === 'skill' ? '滴答接住的学习' : i.type === 'creative' ? '啵啵接住的创意' : '先收藏的碎碎念'}</small></span><button data-action="continue" data-id="${esc(i.id)}">接着聊 ↗</button></div>`).join('') || '<p class="empty">想到什么，先说给皮皮听。</p>'}</details>`;
   }
   function render() {
     const strict = app.mode() === 'strict', reward = app.mode() === 'reward';
@@ -116,10 +124,13 @@
     $('#stage-caption').textContent = robots[id].name + '：' + (custom || (app.mode() === 'strict' ? ['约定我会认真记。你解释原因，我也认真听。', '今天认真一点，遇到变化也可以重新约。', '大胆的脑洞，也配一个能验证的小动作。', '没有收到反馈，我会先问发生了什么。'][id - 1] : robots[id].hello));
   }
   function close() {
+    if (feedbackPending) { toast('回回还在处理这次反馈。请等本轮结束；失败时表单会保留，可以继续修改。'); return false; }
     $('#dialog').close(); pendingVideo = null;
     if (videoURL) { URL.revokeObjectURL(videoURL); videoURL = null; }
+    return true;
   }
   function dialog(title, html) {
+    if (feedbackPending) { toast('回回还在处理这次反馈，表单和原文会保留。请等本轮结束。'); return; }
     if ($('#dialog').open) close();
     $('#dialog-body').innerHTML = `<h2 id="dialog-title">${title}</h2>${html}`;
     $('#dialog').showModal();
@@ -165,26 +176,62 @@
     }
   }
   async function submitFeedback(form) {
+    if (sending || feedbackPending) return;
+    if (recording) { toast('先结束语音并确认文字，再交给回回。'); return; }
     const data = Object.fromEntries(new FormData(form));
-    const button = $('#feedback-submit'); button.disabled = true;
+    data.minutes = data.completion === 'skipped' ? 0 : Number(data.minutes);
+    data.reason = String(data.reason || '').trim();
+    const button = $('#feedback-submit'), modelForThisFeedback = useModel;
+    const controls = [...form.elements, ...$('#dialog').querySelectorAll('[data-action="close"]')].map(control => ({control, disabled: control.disabled}));
+    feedbackPending = true; setSending(true); form.setAttribute('aria-busy', 'true');
+    for (const {control} of controls) control.disabled = true;
+    button.textContent = modelForThisFeedback ? '回回正在听…' : '正在保存…';
     try {
       let media = null;
       if (pendingVideo) media = await app.putMedia(app.uid(), pendingVideo);
-      app.feedback({...data, media}); close(); clearBugs(false); render(); go('chat'); bottom(); saveNotice(); setRobot(4, '谢谢你告诉我真实情况，下一次我们一起调小一点。');
+      if (modelForThisFeedback) {
+        const task = state().tasks.find(t => t.id === data.taskId);
+        const raw = `关于“${task.title}”（${task.date} ${task.start}）的行动反馈：${({done: '完成了', partial: '做了一部分', skipped: '暂时没做'}[data.completion])}，实际${data.completion === 'skipped' ? 0 : data.minutes}分钟，难度${({right: '刚好', hard: '有点难', easy: '挺轻松'}[data.feeling])}。${data.reason || ''}`;
+        const note = await app.submitModel(raw, HaipiguaModel.turn, data.taskId, {expectedFeedback: {completion: data.completion, minutes: data.minutes, feeling: data.feeling, reason: data.reason}});
+        const feedback = [...state().feedback].reverse().find(f => f.taskId === data.taskId && f.createdAt === note.createdAt);
+        if (feedback && media) { feedback.media = media; app.save(); }
+        modelValidated = true;
+      } else app.feedback({...data, media});
+      feedbackPending = false;
+      close(); clearBugs(false); render(); go('chat'); bottom(); saveNotice(); updateConnection(); setRobot(4, '谢谢你告诉我真实情况，下一次我们一起调小一点。');
     } catch (error) { toast(error.message, true); }
-    finally { if (button.isConnected) button.disabled = false; }
+    finally {
+      feedbackPending = false; setSending(false); form.removeAttribute('aria-busy');
+      for (const {control, disabled} of controls) if (control.isConnected) control.disabled = disabled;
+      if (button.isConnected) button.textContent = '把收获交给回回 ↗';
+    }
   }
+  function setSending(value) { sending = value; $('#dictate').disabled = value; }
   function showFact(id, initial = '') {
     const existing = state().studio.facts.find(f => f.id === id);
     dialog(existing ? '这条记忆，我想改一改' : '皮皮，记住这一件小事', `<p class="hint">只记录你确认的内容。你可以随时修改、忘掉它。</p><form id="fact-form" data-id="${esc(existing?.id || '')}"><div class="field"><label for="fact-text">安排时，你希望我们知道什么？</label><textarea id="fact-text" name="text" maxlength="300" required>${esc(existing?.text || initial)}</textarea></div><div class="actions"><button type="submit" class="primary">确认记住</button><button type="button" class="secondary" data-action="close">先不记</button></div></form>`);
   }
   function capabilities() {
-    dialog('现在的嗨皮瓜，会做些什么？', '<p>已经可以：记录完整碎碎念、按本地规则分流、检查时间冲突、提供搜索入口、保存行动反馈，并依据上次反馈调整下一次小行动。</p><p>四个角色目前是同一套前端里的四种职责。真实模型、多智能体执行、检索后筛选教程，以及跨设备记忆，还需要同伴连接后端。</p><p>语音输入由浏览器提供，是否可用取决于浏览器与网络，音频可能交由浏览器的语音服务处理。视频可在本机保存、回看；当前没有自动视频分析。</p><p class="hint">不会根据几句话给你贴性格标签，也不会承诺永久不忘。文字记录请定期导出备份。</p>');
+    dialog('现在的嗨皮瓜，会做些什么？', '<p>本地体验使用规则分流；GLM模式通过本机服务调用免费文本模型：皮皮理解并分流，滴答规划，啵啵探索，回回反馈。每轮只调用需要的角色，不为凑四次调用而浪费时间。</p><p>模型负责理解和建议；任务关联、日期、撞期与本机保存仍由代码校验。每条模型回复可以展开实际调用记录。失败会提示，不会偷偷换成本地规则并冒充模型。</p><p>模型模式发送本次文字和近期相关记录到智谱。密钥仅在本机服务内存，不进浏览器或仓库；文字记录仍保存在你的浏览器，没有跨设备数据库。</p><p>语音转写依赖浏览器。视频仅本机回看，当前文本模型不会看视频。搜索入口不代表已核验教程，官方资料只有显示本次已读取时才表示实际读取。</p>');
+  }
+  function updateConnection() {
+    const name = modelHealth.model === 'glm-4-flash-250414' ? 'GLM-4-Flash · 免费备用' : 'GLM-4.7-Flash';
+    $('#connection-button').textContent = useModel ? name + (modelValidated ? ' · 已真实调用' : ' · 服务已配置') : '本地规则体验 · 未调用模型';
+    $('#connection-dot').style.background = useModel ? '#6b9d77' : '#a6ad99';
+  }
+  async function refreshConnection(initial = false) {
+    modelHealth = await HaipiguaModel.status();
+    if (initial) useModel = modelHealth.ready;
+    updateConnection(); return modelHealth;
+  }
+  function showConnection() {
+    dialog('这段对话，由谁来接住？', `<p><strong>${modelHealth.ready ? '本机模型服务已配置' : '本机模型服务尚未就绪'}</strong></p><p>当前配置：${esc(modelHealth.model || '未检测到')}。只允许官方免费文本型号，切换会明确显示，不会转到收费模型。</p><p>GLM 模式会把本次文字与近期相关记录发送到智谱，按职责调用模型，再校验并保存。本地体验使用演示规则，两种来源逐条标清。</p><div class="actions">${modelHealth.ready ? '<button class="primary" data-action="model-on">使用真实 GLM</button>' : ''}<button class="secondary" data-action="model-recheck">重新检测本机服务</button><button class="secondary" data-action="model-off">使用本地体验</button></div><p class="hint">密钥不要填在碎碎念里。启动方法见仓库的 server/README.md；当前服务地址只在本机有效，不等于腾讯云已接通。</p>`);
   }
   document.addEventListener('click', async event => {
     const button = event.target.closest('button');
     if (!button) return;
     const {action: name, id, view: next, character, sample} = button.dataset;
+    if (sending && !['close', 'bottom', 'clear-bugs'].includes(name) && !character && !next) { toast('这一轮还在处理，请稍等。原文留着，没有重复发送。'); return; }
     if (next) { go(next); return; }
     if (character) { setRobot(+character); return; }
     if (sample) {
@@ -196,6 +243,10 @@
       else if (name === 'mode') showMode();
       else if (name === 'rewards') showRewards();
       else if (name === 'capabilities') capabilities();
+      else if (name === 'model-connection') showConnection();
+      else if (name === 'model-on') { useModel = true; close(); updateConnection(); toast('已切到真实 GLM，下一条发送会调用模型。'); }
+      else if (name === 'model-off') { useModel = false; close(); updateConnection(); toast('已切到本地规则体验。'); }
+      else if (name === 'model-recheck') { await refreshConnection(); showConnection(); }
       else if (name === 'bottom') bottom();
       else if (name === 'older') { olderNotes = true; renderThread(); }
       else if (name === 'feedback') { clearBugs(true); showFeedback(id); }
@@ -227,21 +278,31 @@
       } else if (name === 'choose-import') $('#import-file').click();
     } catch (error) { toast(error.message || '这次没有处理成功，请再试一次。', true); }
   });
-  $('#composer-form').addEventListener('submit', event => {
+  $('#composer-form').addEventListener('submit', async event => {
     event.preventDefault(); if (recording) { toast('先结束语音，再确认文字发出。'); return; }
+    if (sending) return;
+    if (!$('#composer').value.trim()) return;
+    setSending(true); const button = $('#send-button'), message = $('#model-message'), submittedDraft = $('#composer').value, modelForThisTurn = useModel;
+    button.disabled = true; $('#composer').readOnly = true;
+    message.hidden = !useModel; message.classList.remove('error'); message.textContent = '皮皮和朋友们正在理解这一段。只调用需要的角色，可能要等几十秒……';
     try {
-      const note = app.submit($('#composer').value); if (!note) return;
-      $('#composer').value = ''; $('#composer').dispatchEvent(new Event('input')); render(); bottom(); saveNotice();
+      const note = modelForThisTurn ? await app.submitModel(submittedDraft, HaipiguaModel.turn) : app.submit(submittedDraft); if (!note) return;
+      if (modelForThisTurn) modelValidated = true;
+      if ($('#composer').value === submittedDraft) { $('#composer').value = ''; $('#composer').dispatchEvent(new Event('input')); }
+      render(); bottom(); saveNotice();
+      message.hidden = true; updateConnection();
       setRobot(note.agents.includes(4) ? 4 : note.agents.includes(3) ? 3 : note.agents.includes(2) ? 2 : 1);
       if (note.clarification) toast('有一处需要你补充，看皮皮的追问。');
-    } catch (error) { toast(error.message, true); }
+    } catch (error) { message.hidden = false; message.classList.add('error'); message.textContent = error.message + ' 原文还在输入框，检查后可再发送。'; toast(error.message, true); }
+    finally { setSending(false); button.disabled = false; $('#composer').readOnly = false; }
   });
-  $('#composer').addEventListener('input', () => $('#draft-count').textContent = $('#composer').value.length + ' / 8000');
+  $('#composer').addEventListener('input', () => { $('#draft-count').textContent = $('#composer').value.length + ' / 8000'; try { sessionStorage.setItem('haipigua.draft', $('#composer').value); } catch {} });
   $('#composer').addEventListener('keydown', event => { if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) { event.preventDefault(); $('#composer-form').requestSubmit(); } });
   $('#mode-button').addEventListener('click', showMode);
   document.addEventListener('submit', event => {
     if (event.target.id === 'composer-form') return;
     event.preventDefault(); const form = event.target, data = Object.fromEntries(new FormData(form));
+    if (sending) { toast('先等这一轮处理完成，再修改记录。'); return; }
     try {
       if (form.id === 'mode-form') { app.setMode(data.mode, {accepted: data.accepted === 'on', bugs: data.bugs === 'on'}); close(); clearBugs(false); render(); setRobot(2); toast('今天的陪伴方式换好了，随时可以改。'); }
       else if (form.id === 'feedback-form') submitFeedback(form);
@@ -273,12 +334,14 @@
   $('#dialog').addEventListener('cancel', event => { event.preventDefault(); close(); });
   const Speech = window.SpeechRecognition || window.webkitSpeechRecognition;
   $('#dictate').addEventListener('click', () => {
+    if (sending) { toast('这一轮还在处理，结束后再继续说；已有文字留着。'); return; }
     if (!Speech) { toast('这个浏览器没有语音转文字。可以用手机或系统键盘的语音输入，再把文字放进来。'); return; }
     if (recording) { recognition.stop(); return; }
     const base = $('#composer').value; let finalText = '';
     recognition = new Speech(); recognition.lang = 'zh-CN'; recognition.continuous = true; recognition.interimResults = true;
     recognition.onstart = () => { recording = true; $('#dictate').setAttribute('aria-pressed', 'true'); $('#dictate').innerHTML = '<span aria-hidden="true">■</span>结束并检查文字'; $('#speech-status').textContent = '正在听……说完后结束录音，检查文字再递给皮皮。浏览器语音服务可能需要联网。'; };
     recognition.onresult = event => {
+      if (sending) { recognition.stop(); return; }
       let interim = '';
       for (let i = event.resultIndex; i < event.results.length; i++) if (event.results[i].isFinal) finalText += event.results[i][0].transcript; else interim += event.results[i][0].transcript;
       const value = base + (base ? '\n' : '') + finalText + interim;
@@ -291,6 +354,7 @@
   });
   window.addEventListener('hashchange', () => go(location.hash.slice(1)));
   document.addEventListener('visibilitychange', checkReminder);
-  render(); go(location.hash.slice(1)); bottom(); setInterval(checkReminder, 20000); checkReminder();
+  try { $('#composer').value = (sessionStorage.getItem('haipigua.draft') || '').slice(0, 8000); $('#composer').dispatchEvent(new Event('input')); } catch {}
+  render(); go(location.hash.slice(1)); bottom(); setInterval(checkReminder, 20000); checkReminder(); refreshConnection(true);
   if (app.storageError) toast(app.storageError, true);
 })();
