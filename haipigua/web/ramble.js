@@ -313,7 +313,7 @@
   }
 
   function analyze(rawText, rawContext) {
-    const text = clean(rawText).slice(0, 6000), context = rawContext || {}, now = current(context);
+    const text = clean(rawText).slice(0, 8000), context = rawContext || {}, now = current(context);
     const result = {source: SOURCE, version: '1.0.0', text, intents: [], clarification: null, notes: [], contextUpdates: {}};
     if (!text) return result;
     const reply = pendingReply(text, context, now);
@@ -340,11 +340,19 @@
     for (const [clauseIndex, original] of clauses.entries()) {
       const times = timesFrom(original), date = dateFrom(original, now), prefs = preferences(original);
       const previousFeedback = result.intents.at(-1);
-      if (previousFeedback && previousFeedback.kind === 'feedback' && /^(?:因为|由于|原因|临时|太难|好难|有点难|动作|学不懂|跟不上|很简单|太简单|好简单|轻松|容易|明天.*有空|后天.*有空|今天.*(?:累|课|会))/.test(original)) {
+      const feedbackSupplement = /^(?:因为|由于|原因|临时|太难|好难|有点难|动作|学不懂|跟不上|很简单|太简单|好简单|轻松|容易|(?:难度)?刚(?:刚)?好|明天.*有空|后天.*有空|今天.*(?:累|课|会))/.test(original) || /^(?:我|其实|实际|总共|只|才|一共|就)*(?:学习|练习|尝试|学|练|试|做)(?:了|过)?[\d零〇一二两三四五六七八九十半]+(?:个)?(?:分钟|小时|分)/.test(original);
+      const supplementTarget = previousFeedback?.kind === 'feedback' ? matchIdeas(original, context) : null;
+      if (previousFeedback?.kind === 'feedback' && feedbackSupplement && (!supplementTarget?.explicit || supplementTarget.selected?.id === previousFeedback.ideaId)) {
         previousFeedback.original += '，' + original;
         previousFeedback.data.reason = previousFeedback.original;
+        const reportedMinutes = durationFrom(original);
+        if (reportedMinutes !== undefined) {
+          previousFeedback.data.minutes = reportedMinutes;
+          if (reportedMinutes > 0 && previousFeedback.data.completion === 'skipped') previousFeedback.data.completion = 'partial';
+        }
         if (/太难|好难|有点难|困难|学不懂|跟不上|动作难/.test(original)) previousFeedback.data.feeling = 'hard';
         else if (/很简单|好简单|太简单|轻松|容易/.test(original)) previousFeedback.data.feeling = 'easy';
+        else if (/(?:难度)?刚(?:刚)?好/.test(original)) previousFeedback.data.feeling = 'right';
         if (date.explicit && /有空/.test(original)) previousFeedback.data.nextAvailable = date.date;
         continue;
       }
@@ -410,12 +418,13 @@
           if (n <= s && n + 720 > s && n + 720 < 1440) n += 720;
           if (n > s && n - s <= 720) {endTime = clock(n); endAmbiguous = false;}
         }
-        const duration = prefs.duration === undefined ? (start && endTime && !endAmbiguous && minutes(endTime) > minutes(start.time) ? Math.min(10, minutes(endTime) - minutes(start.time)) : 10) : prefs.duration;
+        const defaultDuration = Number(context.defaultPreferences?.duration) || 10;
+        const duration = prefs.duration === undefined ? (start && endTime && !endAmbiguous && minutes(endTime) > minutes(start.time) ? Math.min(defaultDuration, minutes(endTime) - minutes(start.time)) : defaultDuration) : prefs.duration;
         const nextSession = /下次|再安排|另一次|另一(?:次|场)|再(?:学|练|试|做)(?:一|1)?次|再来一次|新的一次/.test(original);
         const reschedule = !nextSession && (/改到|改成|挪到|移到|换到/.test(original) || /^(?:那(?:就|要不)|要不|还是)/.test(original));
         const candidate = reschedule && !target.newIdeaKey ? taskTarget(original, context, target.ideaId).selected : null;
         const currentTask = isFutureTask(candidate, now) ? candidate : null;
-        emit('schedule', original, {date: date.date, dateExplicit: date.explicit, start: start && start.time, end: endTime, duration, ...prefs, timeExplicit: !!start, rawHour: start && start.rawHour, rawMinute: start && start.minute, rawTime: start && start.original, timeAmbiguous: !!(start && start.ambiguous), endAmbiguous, invalidTime: !!(start && !start.valid), replaceTaskId: currentTask && currentTask.id}, ['Agent 2'], target);
+        emit('schedule', original, {date: date.explicit ? date.date : (currentTask ? currentTask.date : date.date), dateExplicit: date.explicit, start: start && start.time, end: endTime, duration, ...prefs, timeExplicit: !!start, rawHour: start && start.rawHour, rawMinute: start && start.minute, rawTime: start && start.original, timeAmbiguous: !!(start && start.ambiguous), endAmbiguous, invalidTime: !!(start && !start.valid), replaceTaskId: currentTask && currentTask.id}, ['Agent 2'], target);
       } else if (Object.keys(prefs).length && !feedback) emit('preference', original, prefs, ['Agent 2'], target);
       if (!type && !busy && !feedback && !timing && !Object.keys(prefs).length) emit('note', original, {text: original}, ['Agent 1']);
     }

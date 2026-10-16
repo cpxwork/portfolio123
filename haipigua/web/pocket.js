@@ -10,6 +10,7 @@
   function latest(state,id){return [...state.feedback].reverse().find(f=>f.ideaId===id);}
   function collision(state,date,start,end,excludeId){return (state.availability[date]||[]).some(s=>start<minute(s.end)&&end>minute(s.start))||state.tasks.some(t=>t.id!==excludeId&&t.date===date&&t.status!=='skipped'&&start<minute(t.end)&&end>minute(t.start));}
   function learningTask(state,idea,data,existing,options){
+    data={...(options.preferences||{}),...(idea.preferences||{}),...data};
     const start=minute(data.start),duration=Number(data.duration||idea.preferences?.duration||10),finish=data.end?minute(data.end):start+duration;
     if(!data.date||!Number.isFinite(start)||!Number.isInteger(duration)||duration<3||duration>120||!Number.isFinite(finish)||finish<=start||finish>=1440)return {error:'这一小步需要完整的时间，几点开始、准备试几分钟？'};
     if(data.date<options.today||(data.date===options.today&&start<options.clockMinutes))return {error:'这个时间已经过去啦，你想安排到哪一天？'};
@@ -29,13 +30,13 @@
     return {result,task:{id:existing?.id||uid(),ideaId:idea.id,date:data.date,start:steps[0].start,end:steps.at(-1).end,duration:steps.reduce((s,t)=>s+t.duration,0),title:idea.title+' · 一次小练习',description:steps.map(t=>t.title+'：'+t.description).join('\n'),steps,resources:resources.filter((r,i)=>resources.findIndex(x=>x.url===r.url)===i),kind:'learning',status:'accepted',createdAt:existing?.createdAt||options.now,origin:'ramble'}};
   }
   function submit(text,state,options){
-    normalize(state);text=String(text||'').trim().slice(0,1500);if(!text)return null;
+    normalize(state);text=String(text||'').trim().slice(0,8000);if(!text)return null;
     options={now:new Date().toISOString(),...options};const before=domain(state),context=state.chatContext;
     let input=text;
     // A short answer can complete a previous scheduling question without re-creating the idea.
     const pending=context.pending;
     if(pending?.kind==='schedule'&&pending.start&&!/\d{1,2}[:：点时]|[一二三四五六七八九十两]+点/.test(text)&&/今天|明天|后天|\d{1,2}月\d{1,2}/.test(text))input=text+' '+pending.start+'开始，试'+(pending.duration||10)+'分钟';
-    const routerContext={ideas:state.ideas,tasks:state.tasks,availability:state.availability,lastIdeaId:context.lastIdeaId,lastTaskId:context.lastTaskId,now:options.now,pending};
+    const routerContext={ideas:state.ideas,tasks:state.tasks,availability:state.availability,lastIdeaId:context.lastIdeaId,lastTaskId:context.lastTaskId,now:options.now,pending,defaultPreferences:options.preferences};
     const fresh=pending?global.RambleRouter.analyze(text,{...routerContext,pending:undefined}):null;
     const analysis=fresh?.intents.some(i=>i.kind==='idea'&&i.data.canApply!==false)?fresh:global.RambleRouter.analyze(input,routerContext);
     const currentIdea=state.ideas.find(i=>i.id===context.lastIdeaId);
@@ -48,7 +49,7 @@
       if(data.canApply===false)continue;
       if(intent.kind==='idea'){
         const raw=data.text||intent.original||text,classed=global.SparkEngine.classifyIdea(raw,data.type||'auto');
-        const item={id:uid(),text:raw.slice(0,2000),title:String(data.title||classed.title||raw).slice(0,80),type:data.type||classed.type||'park',createdAt:options.now,archived:false,preferences:Object.fromEntries(['energy','level','duration','goal'].filter(k=>data[k]!==undefined).map(k=>[k,data[k]]))};
+        const item={id:uid(),text:raw.slice(0,2000),title:String(data.title||classed.title||raw).slice(0,80),type:data.type||classed.type||'park',createdAt:options.now,archived:false,preferences:{...(options.preferences||{}),...Object.fromEntries(['energy','level','duration','goal'].filter(k=>data[k]!==undefined).map(k=>[k,data[k]]))}};
         state.ideas.unshift(item);mapped.set(intent.newIdeaKey||data.newIdeaKey||'new-0',item.id);context.lastIdeaId=item.id;context.lastTaskId=null;note.ideaIds.push(item.id);mutated=true;
         replies.push('收下“'+item.title+'”啦。'+(item.type==='skill'?'学习安排员已经接住了，接着说你什么时候有空就好。':item.type==='creative'?'创意探索员来帮你找一个能试的小入口。':'先替你好好收着，想行动的时候继续说。'));
         if(item.type==='creative'){item.exploration=global.SparkEngine.exploreIdea({idea:item.text,timeBudget:10});replies.push('可以先试：'+String(item.exploration.firstStep?.title||item.exploration.firstStep));note.links.push({view:'lab',label:'已送到创意实验室',ideaId:item.id});note.agents.push(3);}else if(item.type==='skill')note.agents.push(2);
@@ -105,5 +106,6 @@
   }
   function canUndo(id,state){return undoEntry?.id===id&&(!state||JSON.stringify(domain(state))===JSON.stringify(undoEntry.after));}
   function undo(state,id){if(!canUndo(id,state)){undoEntry=null;return false;}Object.assign(state,clone(undoEntry.before));const note=state.notes.find(n=>n.id===id);if(note){note.undone=true;note.changed=false;note.reply='这句原话还在口袋里。刚才的自动改动已经撤销，可以重新说一个安排。';note.links=[];note.clarification=null;}undoEntry=null;return true;}
-  global.PocketFlow=Object.freeze({submit,normalize,undo,canUndo});
+  function checkpoint(state,id){if(undoEntry?.id===id)undoEntry.after=domain(state);}
+  global.PocketFlow=Object.freeze({submit,normalize,undo,canUndo,checkpoint});
 })(window);
