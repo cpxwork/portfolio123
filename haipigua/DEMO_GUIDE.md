@@ -37,4 +37,4 @@ GLM-4.7-Flash 返回429/1305时，官方含义是模型访问量过大，不应�
 
 奖励机制参考：183项研究的[元分析](https://selfdeterminationtheory.org/wp-content/uploads/2017/06/2014_Cerasoli_Intrinsic.pdf)提示内在动机与质量、外部激励与数量关系不同；[宾大步数项目](https://chti.upenn.edu/way-to-be-active)和[2022年随机试验](https://www.jmir.org/2022/10/e38339)对收益/损失框架得到不同结果。它们不能直接证明学习产品有效，更不能推出越重惩罚越好。因此保留用户选择、历史成果与退出机会，再用真实小规模体验检验。
 
-同伴最新远端提交 `70a532c` 是两份计划，不是已运行的后端。具体接入待办见 `BACKEND_HANDOFF.md`。
+main最新核查提交为 `32a4ff7`，已有 `discipline-agent/` 的实际代码和测试；11套离线/模拟测试已独立复跑通过，当前仍是独立命令行模块，没有接入嗨皮瓜网页。不能把模拟姿态、模拟模型演示说成真实服务已上线。详见 `TEAM_REVIEW.md` 与 `BACKEND_HANDOFF.md`。
