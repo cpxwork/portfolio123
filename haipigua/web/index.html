@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#faf8f3">
+  <meta name="description" content="嗨皮瓜：让每个突然冒出的兴趣和创意，都获得一次温柔的小尝试。">
+  <title>嗨皮瓜 · 三分钟热度</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="robot.css">
+  <link rel="stylesheet" href="readability.css">
+  <link rel="stylesheet" href="pocket.css">
+  <script defer src="robot.js"></script>
+  <script defer src="engine.js"></script>
+  <script defer src="ramble.js"></script>
+  <script defer src="pocket.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">跳到主要内容</a>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="主要导航">
+      <a class="brand" href="#home" aria-label="嗨皮瓜，回到小窝">
+        <span class="brand-mark"><i></i><i></i></span>
+        <span><strong>嗨皮瓜<span class="brand-dot">.</span></strong><small>碎碎念，皮皮都听着</small></span>
+      </a>
+      <div class="nav-caption">MY LITTLE SPACE</div>
+      <nav id="nav"></nav>
+      <div class="sidebar-note"><span class="tiny-spark">✦</span><p>不必每天都很厉害，<br>有一点点收获就好。</p></div>
+      <div class="sidebar-companion"><div id="mini-robot"></div><div><strong>皮皮在这里</strong><span><i class="online-dot"></i>随时接住你的灵感</span></div></div>
+      <button class="mode-button" data-action="about"><span class="mode-dot"></span>可操作的演示版<span>ⓘ</span></button>
+    </aside>
+    <div class="workspace">
+      <header class="topbar"><div><span class="hello-dot"></span><span>今天也，嗨皮一点。</span></div><div class="topbar-actions"><span id="today-label"></span><button class="icon-button" data-action="expressions" aria-label="打开皮皮的表情小剧场" title="表情小剧场">☺</button><button class="avatar" data-action="about" aria-label="查看小窝说明">你</button></div></header>
+      <main id="main" tabindex="-1"></main>
+      <footer class="page-footer"><span>MADE FOR YOUR LITTLE SPARKS <i>✦</i></span><button data-action="export">导出我的记录</button><button data-action="import">导入记录</button><span class="footer-storage">记录保存在这个浏览器</span></footer>
+    </div>
+  </div>
+  <dialog id="dialog"><button class="dialog-close icon-button" data-action="close-dialog" aria-label="关闭弹窗">×</button><div id="dialog-content"></div></dialog>
+  <div id="toasts" class="toasts" aria-live="polite" aria-atomic="true"></div>
+  <input id="import-file" type="file" accept="application/json,.json" hidden>
+</body>
+</html>
