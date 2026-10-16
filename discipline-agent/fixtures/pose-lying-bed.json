@@ -1,0 +1,32 @@
+{
+  "scenario": "lying_bed",
+  "label": "躺床",
+  "note": "凌晨卧姿、位于床区域、长时间无操作。模拟摄像头在床区域检测到卧姿。",
+  "context": { "inactiveMin": 18, "locked": false, "hour": 7 },
+  "frames": [
+    {
+      "person": true,
+      "posture": "lying",
+      "zone": "bed",
+      "confidence": 0.88,
+      "quality": 0.9,
+      "keypoints": { "nose": [0.42, 0.31], "left_shoulder": [0.36, 0.35], "left_hip": [0.31, 0.42] }
+    },
+    {
+      "person": true,
+      "posture": "lying",
+      "zone": "bed",
+      "confidence": 0.9,
+      "quality": 0.88,
+      "keypoints": { "nose": [0.43, 0.3], "left_shoulder": [0.37, 0.34], "left_hip": [0.32, 0.43] }
+    },
+    {
+      "person": true,
+      "posture": "lying",
+      "zone": "bed",
+      "confidence": 0.87,
+      "quality": 0.91,
+      "keypoints": { "nose": [0.42, 0.32], "left_shoulder": [0.36, 0.36], "left_hip": [0.3, 0.41] }
+    }
+  ]
+}

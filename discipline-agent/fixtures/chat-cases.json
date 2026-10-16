@@ -1,0 +1,302 @@
+[
+  {
+    "id": "c01",
+    "text": "明天要交数学作业，别忘了",
+    "expect": { "subject": "数学", "ddl": "REL:1", "status": "ready" },
+    "note": "基础：明天 + 要交 + 科目"
+  },
+  {
+    "id": "c02",
+    "text": "英语单词背诵截止到10月20日",
+    "expect": { "subject": "英语", "ddl": "ABS:*-10-20", "status": "ready" },
+    "note": "绝对日期 10月20日"
+  },
+  {
+    "id": "c03",
+    "text": "物理实验报告周五之前交",
+    "expect": { "subject": "物理", "ddl": "WEEK:5", "status": "ready" },
+    "note": "周五（本周或下周五，由当前星期决定）"
+  },
+  {
+    "id": "c04",
+    "text": "后天要交语文作文",
+    "expect": { "subject": "语文", "ddl": "REL:2", "status": "ready" },
+    "note": "后天"
+  },
+  {
+    "id": "c05",
+    "text": "下周三化学卷子要交",
+    "expect": { "subject": "化学", "ddl": "WEEK:3+7", "status": "ready" },
+    "note": "下周三"
+  },
+  {
+    "id": "c06",
+    "text": "今晚八点前得把数学练习册写完",
+    "expect": { "subject": "数学", "time": "20:00", "status": "ready" },
+    "note": "晚上八点 → 20:00"
+  },
+  {
+    "id": "c07",
+    "text": "明天上午九点半交英语听力",
+    "expect": { "subject": "英语", "time": "09:30", "status": "ready" },
+    "note": "上午九点半"
+  },
+  {
+    "id": "c08",
+    "text": "历史作业20号截止",
+    "expect": { "subject": "历史", "ddl": "DAY:20", "status": "ready" },
+    "note": "20号"
+  },
+  {
+    "id": "c09",
+    "text": "生物课下节课要带实验报告",
+    "expect": { "subject": "生物", "status": "ready", "note": "生物课要带的实验报告，subject 必须是生物" },
+    "note": "无明确日期，靠截止语义 + 科目"
+  },
+  {
+    "id": "c10",
+    "text": "你说明天十二点还是后天交数学作业？",
+    "expect": { "subject": "数学", "status": "pending_confirm" },
+    "note": "歧义：明天还是后天 → 必须待确认"
+  },
+  {
+    "id": "c11",
+    "text": "周五还是周六交英语卷子？",
+    "expect": { "subject": "英语", "status": "pending_confirm" },
+    "note": "歧义：两个星期候选"
+  },
+  {
+    "id": "c12",
+    "text": "政治作业今晚八点交",
+    "expect": { "subject": "政治", "time": "20:00", "status": "ready" },
+    "note": "晚上八点"
+  },
+  {
+    "id": "c13",
+    "text": "地理填图作业下个月5号交",
+    "expect": { "subject": "地理", "ddl": "NEXT_MONTH:5", "status": "ready" },
+    "note": "下个月5号"
+  },
+  {
+    "id": "c14",
+    "text": " Programming 作业 deadline 是明天",
+    "expect": { "subject": "编程", "ddl": "REL:1", "status": "ready" },
+    "note": "英文 deadline + Programming"
+  },
+  {
+    "id": "c15",
+    "text": "数学卷子写完啦",
+    "expect": { "subject": "数学", "status": "ready", "done": true },
+    "note": "完成语义"
+  },
+  {
+    "id": "c16",
+    "text": "今晚不交语文作文了，老师说明天再说",
+    "expect": { "subject": "语文", "status": "ready" },
+    "note": "取消/顺延语义"
+  },
+  {
+    "id": "c17",
+    "text": "10月25日要交编程大作业",
+    "expect": { "subject": "编程", "ddl": "ABS:*-10-25", "status": "ready" },
+    "note": "绝对日期 + 大作业"
+  },
+  {
+    "id": "c18",
+    "text": "明天下午三点一刻交物理实验数据",
+    "expect": { "subject": "物理", "time": "15:15", "status": "ready" },
+    "note": "下午三点一刻 → 15:15"
+  },
+  {
+    "id": "c19",
+    "text": "下周一要交美术作业",
+    "expect": { "subject": "美术", "ddl": "WEEK:1+7", "status": "ready" },
+    "note": "下周一"
+  },
+  {
+    "id": "c20",
+    "text": "数学作业改到周五",
+    "expect": { "subject": "数学", "reschedule": true, "status": "ready" },
+    "note": "改期语义（不丢原日期）"
+  },
+  {
+    "id": "c21",
+    "text": "英语单词今天晚上七点前背完",
+    "expect": { "subject": "英语", "time": "19:00", "status": "ready" },
+    "note": "晚上七点"
+  },
+  {
+    "id": "c22",
+    "text": "后天要交历史小论文",
+    "expect": { "subject": "历史", "ddl": "REL:2", "status": "ready" },
+    "note": "后天 + 小论文"
+  },
+  {
+    "id": "c23",
+    "text": "化学方程式配平练习明天交",
+    "expect": { "subject": "化学", "ddl": "REL:1", "status": "ready" },
+    "note": "明天 + 科目细分"
+  },
+  {
+    "id": "c24",
+    "text": "音乐课下节课要交乐理作业",
+    "expect": { "subject": "音乐", "status": "ready" },
+    "note": "无明确日期"
+  },
+  {
+    "id": "c25",
+    "text": "生物作业周五交，地理作业周六交",
+    "expect": { "subject": "生物", "status": "pending_confirm" },
+    "note": "一句两个科目两个日期 → 歧义待确认"
+  },
+  {
+    "id": "c26",
+    "text": "明天要交数学作业",
+    "expect": { "subject": "数学", "ddl": "REL:1", "status": "ready" },
+    "note": "基础句式"
+  },
+  {
+    "id": "c27",
+    "text": "体育测试下周跑八百米",
+    "expect": { "subject": "体育", "status": "ready" },
+    "note": "体育事项"
+  },
+  {
+    "id": "c28",
+    "text": "后天下午四点交编程实验报告",
+    "expect": { "subject": "编程", "time": "16:00", "ddl": "REL:2", "status": "ready" },
+    "note": "日期 + 下午四点"
+  },
+  {
+    "id": "c29",
+    "text": "数学作业明天中午十二点前交",
+    "expect": { "subject": "数学", "time": "12:00", "ddl": "REL:1", "status": "ready" },
+    "note": "中午十二点"
+  },
+  {
+    "id": "c30",
+    "text": "下个月10号要交语文手抄报",
+    "expect": { "subject": "语文", "ddl": "NEXT_MONTH:10", "status": "ready" },
+    "note": "下个月10号"
+  },
+  {
+    "id": "c31",
+    "text": "英语阅读理解练习明天要交",
+    "expect": { "subject": "英语", "ddl": "REL:1", "status": "ready" },
+    "note": "明天 + 细分"
+  },
+  {
+    "id": "c32",
+    "text": "历史背诵任务今天晚上交",
+    "expect": { "subject": "历史", "status": "ready" },
+    "note": "今晚（当天）"
+  },
+  {
+    "id": "c33",
+    "text": "物理作业 deadline 明天下午五点",
+    "expect": { "subject": "物理", "time": "17:00", "ddl": "REL:1", "status": "ready" },
+    "note": "deadline + 下午五点"
+  },
+  {
+    "id": "c34",
+    "text": "周五要交数学卷子和英语卷子",
+    "expect": { "subject": "数学", "status": "pending_confirm" },
+    "note": "同一天两个科目 → 需确认是哪一个（subject 取首个）"
+  },
+  {
+    "id": "c35",
+    "text": "明天要交数学作业，后天要交英语作业",
+    "expect": { "subject": "数学", "status": "ready" },
+    "note": "两句都是明确待办，首条 ready"
+  },
+  {
+    "id": "c36",
+    "text": "地理作业三十号截止",
+    "expect": { "subject": "地理", "ddl": "DAY:30", "status": "ready" },
+    "note": "中文数字 三十号"
+  },
+  {
+    "id": "c37",
+    "text": "后天要交化学实验报告，记得带上数据",
+    "expect": { "subject": "化学", "ddl": "REL:2", "status": "ready" },
+    "note": "带附加信息"
+  },
+  {
+    "id": "c38",
+    "text": "明天要交美术画的画",
+    "expect": { "subject": "美术", "ddl": "REL:1", "status": "ready" },
+    "note": "基础"
+  },
+  {
+    "id": "c39",
+    "text": "社团活动报名后天截止",
+    "expect": { "subject": "社团", "ddl": "REL:2", "status": "ready" },
+    "note": "报名截止"
+  },
+  {
+    "id": "c40",
+    "text": "明天要交值日安排表",
+    "expect": { "subject": "值日", "ddl": "REL:1", "status": "ready" },
+    "note": "值日"
+  },
+  {
+    "id": "c41",
+    "text": "数学作业今晚十点前必须交",
+    "expect": { "subject": "数学", "time": "22:00", "status": "ready" },
+    "note": "晚上十点"
+  },
+  {
+    "id": "c42",
+    "text": "英语听力练习下周二交",
+    "expect": { "subject": "英语", "ddl": "WEEK:2+7", "status": "ready" },
+    "note": "下周二"
+  },
+  {
+    "id": "c43",
+    "text": "生物笔记明天要检查",
+    "expect": { "subject": "生物", "ddl": "REL:1", "status": "ready" },
+    "note": "检查语义"
+  },
+  {
+    "id": "c44",
+    "text": "下周五要交物理研究性学习报告",
+    "expect": { "subject": "物理", "ddl": "WEEK:5+7", "status": "ready" },
+    "note": "下周五"
+  },
+  {
+    "id": "c45",
+    "text": "今天要交语文生字本",
+    "expect": { "subject": "语文", "ddl": "REL:0", "status": "ready" },
+    "note": "今天"
+  },
+  {
+    "id": "c46",
+    "text": "明天要交英语ppt",
+    "expect": { "subject": "英语", "ddl": "REL:1", "status": "ready" },
+    "note": "英文材料 ppt"
+  },
+  {
+    "id": "c47",
+    "text": "数学作业到底是明天交还是周五交？",
+    "expect": { "subject": "数学", "status": "pending_confirm" },
+    "note": "歧义：明天 vs 周五"
+  },
+  {
+    "id": "c48",
+    "text": "后天要交历史时间轴",
+    "expect": { "subject": "历史", "ddl": "REL:2", "status": "ready" },
+    "note": "后天 + 时间轴"
+  },
+  {
+    "id": "c49",
+    "text": "下周三要交地理模型",
+    "expect": { "subject": "地理", "ddl": "WEEK:3+7", "status": "ready" },
+    "note": "下周三"
+  },
+  {
+    "id": "c50",
+    "text": "明天要交编程代码，用Python写",
+    "expect": { "subject": "编程", "ddl": "REL:1", "status": "ready" },
+    "note": "编程 + Python"
+  }
+]

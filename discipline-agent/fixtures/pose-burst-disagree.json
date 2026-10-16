@@ -1,0 +1,11 @@
+{
+  "scenario": "burst_disagree",
+  "label": "歧义：帧间分歧",
+  "note": "3 帧中 2 帧卧姿 1 帧无人，帧间折叠必须取多数并打 7 折置信度。",
+  "context": { "inactiveMin": 12, "locked": false, "hour": 23 },
+  "frames": [
+    { "person": true, "posture": "lying", "zone": "bed", "confidence": 0.8, "quality": 0.8 },
+    { "person": false, "posture": "absent", "zone": "none", "confidence": 0.6, "quality": 0.7 },
+    { "person": true, "posture": "lying", "zone": "bed", "confidence": 0.82, "quality": 0.82 }
+  ]
+}

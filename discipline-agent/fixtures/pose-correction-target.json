@@ -1,0 +1,10 @@
+{
+  "scenario": "correction_target",
+  "label": "纠正回流：场景样本",
+  "note": "该场景（夜间/未锁屏/≥25min）由时间规则判 lying_bed，用户纠正为 away；第二次估计应直接给 away。",
+  "context": { "inactiveMin": 30, "locked": false, "hour": 23 },
+  "cameraUnavailable": "no_camera",
+  "frames": [],
+  "expectedBeforeCorrection": "lying_bed",
+  "expectedAfterCorrection": "away"
+}

@@ -1,0 +1,9 @@
+{
+  "scenario": "ambiguous",
+  "label": "歧义：卧姿但不在床区域",
+  "note": "posture 与 zone 矛盾（sitting + bed），融合算法必须降为 unknown。",
+  "context": { "inactiveMin": 6, "locked": false, "hour": 14 },
+  "frames": [
+    { "person": true, "posture": "sitting", "zone": "bed", "confidence": 0.72, "quality": 0.85 }
+  ]
+}

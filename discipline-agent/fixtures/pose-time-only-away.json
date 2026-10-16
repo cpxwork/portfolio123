@@ -1,0 +1,8 @@
+{
+  "scenario": "time_only_away",
+  "label": "降级：纯时间规则 → away",
+  "note": "无摄像头（captureFrame 返回 ok:false）。锁屏 + 30 分钟无操作 → away。",
+  "context": { "inactiveMin": 30, "locked": true, "hour": 11 },
+  "cameraUnavailable": "no_camera",
+  "frames": []
+}

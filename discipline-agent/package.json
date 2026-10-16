@@ -1,0 +1,22 @@
+{
+  "name": "discipline-agent-a",
+  "version": "0.1.0",
+  "private": true,
+  "description": "自律助手 A 侧：后端 + Agent 决策层 + 客户端本地层（指令通道 / 状态估计 / 拆步 / 升级 / 执行 / 审计）",
+  "main": "instructions.js",
+  "scripts": {
+    "test": "node run-tests.js",
+    "test:m0": "node instructions.test.js && node manifest.test.js && node executor.test.js",
+    "test:m1": "node chat-sense.test.js",
+    "test:m2": "node state-sensor.test.js",
+    "test:m3": "node task-planner.test.js",
+    "test:m4": "node escalation.test.js",
+    "test:m5": "node audit.test.js",
+    "demo:m0": "node demo-m0.js",
+    "demo": "node demo.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {}
+}

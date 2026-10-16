@@ -1,0 +1,32 @@
+{
+  "scenario": "seated_desk",
+  "label": "在书桌前",
+  "note": "白天坐姿、位于书桌区域、屏幕未锁但已有一段时间无操作。",
+  "context": { "inactiveMin": 16, "locked": false, "hour": 15 },
+  "frames": [
+    {
+      "person": true,
+      "posture": "sitting",
+      "zone": "desk",
+      "confidence": 0.85,
+      "quality": 0.92,
+      "keypoints": { "nose": [0.5, 0.28], "left_shoulder": [0.44, 0.4], "left_hip": [0.46, 0.62] }
+    },
+    {
+      "person": true,
+      "posture": "sitting",
+      "zone": "desk",
+      "confidence": 0.86,
+      "quality": 0.9,
+      "keypoints": { "nose": [0.51, 0.29], "left_shoulder": [0.45, 0.41], "left_hip": [0.47, 0.63] }
+    },
+    {
+      "person": true,
+      "posture": "sitting",
+      "zone": "desk",
+      "confidence": 0.85,
+      "quality": 0.91,
+      "keypoints": { "nose": [0.5, 0.3], "left_shoulder": [0.44, 0.42], "left_hip": [0.46, 0.64] }
+    }
+  ]
+}

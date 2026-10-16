@@ -1,0 +1,8 @@
+{
+  "scenario": "time_only_lying",
+  "label": "降级：纯时间规则 → lying_bed",
+  "note": "无摄像头。未锁屏 + 40 分钟无操作 + 夜间 23 点 → lying_bed（弱推断，置信度 ≤0.5）。",
+  "context": { "inactiveMin": 40, "locked": false, "hour": 23 },
+  "cameraUnavailable": "permission_denied",
+  "frames": []
+}

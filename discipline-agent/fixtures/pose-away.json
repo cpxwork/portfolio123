@@ -1,0 +1,11 @@
+{
+  "scenario": "away",
+  "label": "离开",
+  "note": "连拍 3 帧全部无人；屏幕已锁 + 25 分钟无操作。用于区分「躺着不动」与「人已离开」。",
+  "context": { "inactiveMin": 25, "locked": true, "hour": 10 },
+  "frames": [
+    { "person": false, "posture": "absent", "zone": "none", "confidence": 0.82, "quality": 0.9 },
+    { "person": false, "posture": "absent", "zone": "none", "confidence": 0.85, "quality": 0.91 },
+    { "person": false, "posture": "absent", "zone": "none", "confidence": 0.83, "quality": 0.89 }
+  ]
+}

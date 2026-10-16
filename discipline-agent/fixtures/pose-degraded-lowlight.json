@@ -1,0 +1,9 @@
+{
+  "scenario": "degraded_low_light",
+  "label": "降级：光线差",
+  "note": "画面质量过低（quality<0.3），推理结果不可信 → 走时间规则降级。",
+  "context": { "inactiveMin": 20, "locked": true, "hour": 3 },
+  "frames": [
+    { "person": true, "posture": "unknown", "zone": "other", "confidence": 0.2, "quality": 0.1 }
+  ]
+}
