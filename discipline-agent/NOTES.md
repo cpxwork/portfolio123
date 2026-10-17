@@ -283,3 +283,35 @@ A-M1 子代理（206e33bf）按用户指示停手并交付盘点。处理结果�
 3. **`GetRawText()` 不可用于跨进程比较**：内核 stdout 中文是 `\uXXXX` 转义，金样文件（JS 写出）是原文中文，GetRawText 返回原始输入片段不反转义 → "Strings differ (pos 1)"。改为语义比较（String 走 GetString()；bool/null 比 ValueKind）。
 
 **DeepAssert 约定**：数值容差 1e-6（FormulaConstants.GoldenTolerance）；对象只比 expect 列出的字段（内核可多返回字段）；数组长度相等；字符串语义相等。
+
+---
+
+### 2026-10-17 12:35 | A↔B 连接层落地：本机 HTTP 桥（bridge/）
+
+前端（haipigua）此前与 discipline-agent 完全隔离——haipigua 有 `/api/agent` 文本服务，
+discipline-agent 只有库和 demo，无任何对外入口。本次补齐连接层。
+
+**新增**
+| 文件 | 职责 |
+|---|---|
+| `bridge/service.cjs` | 装配 bus/executor/escalation/audit，纯逻辑、可单测；不感知 HTTP |
+| `bridge/server.cjs` | 本机 HTTP 层：127.0.0.1:8879，Host/Origin 校验、128KiB 上限、统一错误码 |
+| `bridge/start-bridge.cjs` | 启动脚本（--work-root / --authorize-l5 / --l5-target / --port） |
+| `bridge/discipline-client.js` | 前端封装（UMD，可直接拷进 haipigua/web/），含 `describe()` 把指令翻成人话 |
+| `bridge/bridge.test.js` | 11 项契约测试，已并入 `run-tests.js` |
+| `bridge/FRONTEND.md` | 前端接入说明（接口、级别表、边界、preview 反代改法） |
+
+**接口**：`GET /api/health`、`POST /api/discipline/{start,tick,ack,complete,revoke,restore,audit}`、`GET /api/discipline/state`
+
+**踩到的坑（值得记）**
+1. `options.port || DEFAULT_PORT` 把 `port:0`（系统分配空闲端口）吃成 8879 → 测试与手动起的演示服务抢端口，报 EADDRINUSE。**`0` 是合法端口值，必须用 `=== undefined` 判断**。
+2. `bus.ack(id, info)` / `bus.complete(id, result)` 是**位置参数**，不是对象；传 `{id}` 会报"未知指令 id: [object Object]"。
+3. 路由匹配必须优先于 body 解析，否则空 body 的未知路由会被误判成 `BAD_JSON`(400) 而非 `BAD_ROUTE`(404)。
+4. **Node 24 + Windows**：HTTP 测试收尾若 `server.close()` 后立即退出，会撞 libuv `Assertion failed: !(handle->flags & UV_HANDLE_CLOSING)`，退出码 3221226505 → 看似测试失败实则全绿。解法：`server.close()` 后 `await setTimeout(300)` 让句柄收干净。
+5. 断言"文件未被隔离"时不能判原路径是否存在——L4 洗牌已把文件改名，**应判隔离区 `.quarantine/` 是否为空**。
+
+**测试**：`node run-tests.js` → 14 套 / 14 通过 / 0 失败（exit 0）；其中 bridge 11/11。
+
+**安全默认**：L5 隔离默认关闭（未授权封顶 L4 并在 reason 说明）；单日强制上限 4 次；永不删除文件；全程审计 + 可还原。
+
+**未做**：preview.cjs 的反代改动属于 haipigua 一侧（前端负责人维护），文档已给出改法但未替其修改。

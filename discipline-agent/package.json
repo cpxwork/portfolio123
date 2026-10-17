@@ -13,7 +13,9 @@
     "test:m4": "node escalation.test.js",
     "test:m5": "node audit.test.js",
     "demo:m0": "node demo-m0.js",
-    "demo": "node demo.js"
+    "demo": "node demo.js",
+    "test:bridge": "node bridge/bridge.test.js",
+    "bridge": "node bridge/start-bridge.cjs"
   },
   "engines": {
     "node": ">=18"

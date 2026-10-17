@@ -23,7 +23,9 @@ const SUITES = [
   'escalation-llm.test.js',
   // M-K 学习子系统（Node↔C# 内核 + 学习记录存储）
   'learning-kernel.test.js',
-  'learning-store.test.js'
+  'learning-store.test.js',
+  // A↔B 连接层（本机 HTTP 桥）
+  'bridge/bridge.test.js'
 ];
 
 let failed = 0;
