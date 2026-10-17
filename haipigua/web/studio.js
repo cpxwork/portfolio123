@@ -116,6 +116,28 @@
     thread.innerHTML = html;
     thread.scrollTop = atBottom || !notes.length ? thread.scrollHeight : scroll;
   }
+  let stageNoteId=null,stageView=null;
+  function stageBody(node){
+    return `${node.previous?`<p class="speech-before">之前：${text(node.previous)}</p>`:''}${node.paragraphs.map(p=>`<p>${text(p)}</p>`).join('')}${node.bullets.length?`<ul>${node.bullets.map(p=>`<li>${text(p)}</li>`).join('')}</ul>`:''}`;
+  }
+  function renderStage(){
+    const note=state().notes.find(n=>n.id===stageNoteId)||state().notes.at(-1);
+    stageView=HaipiguaRelay.build(state(),note);
+    for(const id of [1,2,3,4]){
+      const node=stageView.nodes[id];
+      $('#relay-node-'+id).setAttribute('data-state',node.state);
+      $('#agent-speech-'+id).innerHTML=`<div class="speech-label"><strong>${esc(node.name)}</strong><span class="speech-status">${esc(node.status)}</span></div><div class="speech-body" tabindex="0" aria-label="${esc(node.name)}本轮说的话">${stageBody(node)}</div>${node.noteId?`<button class="speech-expand" data-action="stage-detail" data-id="${id}" data-note-id="${esc(node.noteId)}">展开这句话 ↗</button>`:''}`;
+    }
+    $('#relay-source').textContent=stageView.source==='model'?`模型回复 · ${stageView.calls.length} 次调用记录`:stageView.source==='local-demo'?'离线规则体验 · 未调用模型':'等你的一句话';
+    $('#relay-caption').textContent=stageView.caption;
+    $('#relay-original').hidden=!note;
+    $('#relay-original-summary').textContent=note?'你刚才说：'+note.text.slice(0,75)+(note.text.length>75?'…':''):'';
+    $('#relay-original-text').textContent=note?.text||'';
+    for(const from of [1,2,3,4])for(const to of [1,2,3,4]){
+      const path=$('#route-'+from+'-'+to);if(path)path.classList.toggle('active',stageView.edges.some(e=>e.from===from&&e.to===to));
+    }
+    $('#relay-return').hidden=!stageView.edges.some(e=>e.from===4&&e.to===1);
+  }
   function taskRows(tasks) {
     return tasks.length ? tasks.map(t => `<article class="task-row"><div class="task-clock">${esc(t.start)}<small>${date(t.date)} · ${t.duration} 分钟</small></div><div class="task-detail"><h3>${esc(t.title)}</h3><p>${t.kind === 'experiment' ? '啵啵的创意小实验' : '滴答的学习小行动'}${t.contract?.date === app.current().today && app.mode() === 'strict' ? ' · 今天的认真约定' : ''}</p></div>${t.status === 'accepted' ? `<button data-action="feedback" data-id="${esc(t.id)}">带回反馈 ↗</button>` : `<span class="task-status">${status(t.status)}</span>`}<button data-action="task-detail" data-id="${esc(t.id)}">详情</button></article>`).join('') : '<p class="empty">这里还有空白。直接在对话里说“明天中午十二点练十分钟”，就能给喜欢留一点时间。</p>';
   }
@@ -135,7 +157,7 @@
     $('#reward-strip').hidden = !reward;
     $('#reward-points').textContent = '✦ ' + state().studio.rewards.reduce((sum, r) => sum + r.points, 0) + ' 成长值';
     $('#task-count').textContent = state().tasks.filter(t => t.status === 'accepted').length;
-    renderThread(); renderAgenda(); renderMemory();
+    renderThread(); renderStage(); renderAgenda(); renderMemory();
   }
   function go(next, focus = false) {
     view = ['chat', 'agenda', 'memory'].includes(next) ? next : 'chat';
@@ -264,7 +286,7 @@
         app.feedback({taskId: task.id, completion: data.completion, minutes, feeling: data.feeling, reason, media});
       }
       feedbackPending = false;
-      close(); clearBugs(false); render(); go('chat'); bottom(); saveNotice(); updateConnection(); setRobot(4, '谢谢你告诉我真实情况。下一步只更新建议，不会替你预约时间。');
+      stageNoteId=null; close(); clearBugs(false); render(); go('chat'); bottom(); saveNotice(); updateConnection(); setRobot(4, '谢谢你告诉我真实情况。下一步只更新建议，不会替你预约时间。');
     } catch (error) { toast(error.message, true); }
     finally {
       feedbackPending = false; setSending(false); form.removeAttribute('aria-busy');
@@ -272,7 +294,7 @@
       if (button.isConnected) button.textContent = '把收获交给回回 ↗';
     }
   }
-  function setSending(value) { sending = value; $('#dictate').disabled = value; }
+  function setSending(value) { sending = value; $('#dictate').disabled = value; $('#relay-request-status').hidden=!value; $('#relay-request-status').textContent=value?'正在处理这段话，收到完整结果后会更新头顶对话。':''; }
   function showFact(id, initial = '') {
     const existing = state().studio.facts.find(f => f.id === id);
     dialog(existing ? '这条记忆，我想改一改' : '皮皮，记住这一件小事', `<p class="hint">只记录你确认的内容。你可以随时修改、忘掉它。</p><form id="fact-form" data-id="${esc(existing?.id || '')}"><div class="field"><label for="fact-text">安排时，你希望我们知道什么？</label><textarea id="fact-text" name="text" maxlength="300" required>${esc(existing?.text || initial)}</textarea></div><div class="actions"><button type="submit" class="primary">确认记住</button><button type="button" class="secondary" data-action="close">先不记</button></div></form>`);
@@ -311,6 +333,13 @@
     }
     try {
       if (name === 'close') close();
+      else if(name==='history'){$('#conversation-log').open=!$('#conversation-log').open;if($('#conversation-log').open)$('#conversation-log').scrollIntoView?.({behavior:'smooth',block:'start'});}
+      else if(name==='stage-detail'){
+        const n=state().notes.find(n=>n.id===noteId),node=HaipiguaRelay.build(state(),n).nodes[Number(id)];if(!n||!node)return;
+        dialog(node.name+' · '+node.status,`<div class="stage-detail">${stageBody(node)}${resources(node.links)}</div><p class="hint">${n.source==='model'?'本条模型结果':'本地规则体验，未调用模型'} · ${esc(n.text.slice(0,120))}</p>`);
+      }
+      else if(name==='stage-turn'){stageNoteId=id;renderStage();go('chat');$('#character-stage').scrollIntoView?.({behavior:'smooth',block:'start'});}
+
       else if (name === 'mode') showMode();
       else if (name === 'rewards') showRewards();
       else if (name === 'capabilities') capabilities();
@@ -357,7 +386,7 @@
     button.disabled = true; $('#composer').readOnly = true;
     message.hidden = !useModel; message.classList.remove('error'); message.textContent = '皮皮和朋友们正在理解这一段。只调用需要的角色，可能要等几十秒……';
     try {
-      const note = modelForThisTurn ? await app.submitModel(submittedDraft, HaipiguaModel.turn) : app.submit(submittedDraft); if (!note) return;
+      const note = modelForThisTurn ? await app.submitModel(submittedDraft, HaipiguaModel.turn) : app.submit(submittedDraft); if (!note) return; stageNoteId=null;
       if (modelForThisTurn) modelValidated = true;
       if ($('#composer').value === submittedDraft) { $('#composer').value = ''; $('#composer').dispatchEvent(new Event('input')); }
       render(); bottom(); saveNotice();

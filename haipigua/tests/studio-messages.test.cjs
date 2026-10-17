@@ -10,7 +10,7 @@ function fixture(){
   let serial=0;const saved=new Map(),storage={getItem:key=>saved.get(key)||null,setItem:(key,value)=>saved.set(key,value)};
   const context={console,Date,Intl,crypto:{randomUUID:()=>`view-${++serial}`},localStorage:storage};context.window=context;
   vm.createContext(context);
-  for(const name of ['engine.js','ramble.js','pocket.js','studio-core.js'])vm.runInContext(fs.readFileSync(path.join(__dirname,'../web',name),'utf8'),context,{filename:name});
+  for(const name of ['engine.js','ramble.js','pocket.js','studio-core.js','relay-view.js'])vm.runInContext(fs.readFileSync(path.join(__dirname,'../web',name),'utf8'),context,{filename:name});
   const app=context.HaipiguaCore.create(storage,()=>new Date(NOW));
   function turn(raw,intents,content){return app.submit(raw,{source:'model',trace,analysis:{intents},content});}
   function render(){
