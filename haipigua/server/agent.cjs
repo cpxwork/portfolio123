@@ -24,8 +24,8 @@ function validDate(value) {
   const date = new Date(value + 'T00:00:00.000Z');
   return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
 }
-function originAllowed(origin) {
-  return ALLOWED_ORIGINS.has(origin);
+function originAllowed(origin, extra) {
+  return ALLOWED_ORIGINS.has(origin) || (extra instanceof Set && extra.has(origin));
 }
 function headerMap(headers) { return Object.fromEntries(Object.entries(headers || {}).map(([k, v]) => [k.toLowerCase(), String(v)])); }
 async function digest(value){return new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(value)));}
@@ -355,15 +355,15 @@ function createBaseHandler() {
   return async function handleRequest(request, env = {}, options = {}) {
     const headers = headerMap(request.headers);
     const origin = headers.origin || '';
-    const cors = originAllowed(origin) ? {'Access-Control-Allow-Origin': origin, 'Vary': 'Origin'} : {};
+    const cors = originAllowed(origin, options.allowedOrigins) ? {'Access-Control-Allow-Origin': origin, 'Vary': 'Origin'} : {};
     const response = (status, body, extra = {}) => ({status, headers: {'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', ...cors, ...extra}, body});
     const method = String(request.method || 'GET').toUpperCase();
     const path = String(request.path || '/').split('?')[0].replace(/\/$/, '') || '/';
     const config = configuration(env);
     if (method === 'GET' && (path === '/health' || path === '/api/health')) return response(200, providers.publicHealth(config));
-    if (method === 'OPTIONS') return originAllowed(origin) ? response(204, null, {'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type, Authorization', 'Access-Control-Max-Age': '600'}) : response(403, {error: {code: 'ORIGIN_DENIED', message: '此网站来源尚未获准。'}});
+    if (method === 'OPTIONS') return originAllowed(origin, options.allowedOrigins) ? response(204, null, {'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type, Authorization', 'Access-Control-Max-Age': '600'}) : response(403, {error: {code: 'ORIGIN_DENIED', message: '此网站来源尚未获准。'}});
     if (method !== 'POST' || !['/turn', '/api/turn', '/api/agent'].includes(path)) return response(404, {error: {code: 'NOT_FOUND', message: '接口不存在。'}});
-    if (!originAllowed(origin)) return response(403, {error: {code: 'ORIGIN_DENIED', message: '请从本机嗨皮瓜预览页发起请求。'}});
+    if (!originAllowed(origin, options.allowedOrigins)) return response(403, {error: {code: 'ORIGIN_DENIED', message: '请从本机嗨皮瓜预览页发起请求。'}});
     if (!config.ready) return response(503, {error: {code: 'NOT_CONFIGURED', message: '真实 AI 尚未配置完成，请先完成服务端密钥配置。'}});
     if (!consume('local-session', 12)) return response(429, {error: {code: 'RATE_LIMIT', message: '皮皮这一分钟有点忙，请稍后再说。'}}, {'Retry-After': '60'});
     if (active >= 1) return response(429, {error: {code: 'BUSY', message: '皮皮还在处理上一段话，请稍后重试。'}}, {'Retry-After': '5'});
@@ -707,7 +707,7 @@ function createHandler() {
     }
     if (method !== 'POST' || !['/turn', '/api/turn', '/api/agent'].includes(path)) return base(request, env, options);
     const config = configuration(env);
-    if (!originAllowed(headerMap(request.headers).origin || '') || !config.ready) return base(request, env, options);
+    if (!originAllowed(headerMap(request.headers).origin || '', options.allowedOrigins) || !config.ready) return base(request, env, options);
     let input, wire;
     try { wire = typeof request.body === 'string' ? request.body : JSON.stringify(request.body ?? {}); if (Buffer.byteLength(wire) > LIMIT) return error(413, 'BODY_TOO_LARGE', '这次记录太长，请缩短后重试。'); input = typeof request.body === 'string' ? JSON.parse(request.body) : request.body; }
     catch { return error(400, 'BAD_JSON', '请求格式不完整。'); }

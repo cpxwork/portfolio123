@@ -2,9 +2,40 @@
 
 这是从腾讯云当前线上版本建立的共同开发目录。2026年10月16日首次导入的 `web/` 内11个文件，来自腾讯云 `haipigua/` 目录，经逐一校验一致。
 
-当前线上网站：[打开嗨皮瓜](https://frost-guard-d3gw4cry5916d32c4-1503361620.tcloudbaseapp.com/haipigua/)。
+当前线上网站：[打开嗨皮瓜](https://frost-guard-d3gw4cry5916d32c4-1503361620.tcloudbaseapp.com/haipigua/)。公开站仍是旧静态版，Git push 不会自动部署。
 
-## 看前端，不需要先读代码
+## 成品启动：一个进程同时提供页面和 API
+
+这是给最终用户/演示用的运行方式，不需要分别启动 8877 预览和 8878 后端：
+
+```powershell
+cd haipigua
+Copy-Item .env.example .env
+# 编辑 .env，至少填 MODEL_PROVIDER、MODEL_API_KEY、MODEL_NAME
+npm start
+```
+
+然后打开 `http://127.0.0.1:8877/`。页面和 `/api/health`、`/api/agent` 同源；密钥只在 Node 进程里，`.env` 已被 Git 忽略。没有 `npm` 也可以直接运行：
+
+```powershell
+node server/app.cjs
+```
+
+先做不花钱的配置检查：
+
+```powershell
+npm run verify
+```
+
+确认补贴到账后，做一次最少量真实调用（需要显式确认）：
+
+```powershell
+$env:CONFIRM_LIVE="1"; node scripts/verify-product.cjs --live
+```
+
+真实调用会记录到 `.local/product-verification.json`，包含平台、型号、调用次数、token 和本机估算费用；不会包含密钥。完整配置、公网边界和 Docker 见 [PRODUCT.md](PRODUCT.md)。
+
+## 开发时只看前端
 
 在共同仓库根目录运行（建议统一使用 Node.js 20+，无第三方依赖）：
 
@@ -12,15 +43,17 @@
 node haipigua/preview.cjs
 ```
 
-然后打开终端显示的网址，默认 http://127.0.0.1:8877/ 。修改 `haipigua/web/` 后刷新网页，即可查看修改。这个预览只在启动它的电脑上运行；同伴可下载对应分支，使用同样命令预览。
+然后打开终端显示的网址，默认 http://127.0.0.1:8877/ 。修改 `haipigua/web/` 后刷新网页，即可查看修改。这个预览只在启动它的电脑上运行；同伴可下载对应分支，使用同样命令预览。开发模式仍可把 `/api/health`、`/api/agent` 转发到本机 8878 的独立服务。
 
 GitHub 文件页面展示源码；本机预览或腾讯云网址展示真正可操作的网页。预览中的浏览器记录与腾讯云网站各自独立。
 
 ## 目录与边界
 
 - `web/`：原生 HTML、CSS、JavaScript 前端，可以直接编辑，无需 npm 安装或构建。
-- `preview.cjs`：本机前端预览，并把 `/api/health`、`/api/agent` 转发给本机8878服务；它自己不持有密钥、不调用模型。
-- `server/`：独立的本机文本模型服务，启动方法见下文。
+- `server/app.cjs`：成品单进程服务，直接提供 `web/` 页面和同源 `/api/health`、`/api/agent`；密钥从服务端环境/`.env` 读取。
+- `preview.cjs`：开发用本机前端预览，可把 `/api/health`、`/api/agent` 转发给本机8878服务；它自己不持有密钥、不调用模型。
+- `server/`：本机文本模型服务与 provider/review 合同，启动方法见下文；`server/app.cjs` 是成品入口。
+- `PRODUCT.md`：成品配置、验证、Docker 与公网部署边界。
 - `COLLABORATION.md`：前后端分工、提交与联调约定。
 
 2026年10月17日的前端升级使用 `index.html`、`studio.js`、`studio-core.js`、`studio.css` 和四张机器人 WebP。旧 `app.js` 与样式保留作历史参考，不再由页面加载。无需 npm 安装或构建。
@@ -28,7 +61,7 @@ GitHub 文件页面展示源码；本机预览或腾讯云网址展示真正可�
 - `DEMO_GUIDE.md`：打开网站、三分钟演示顺序、赛事资料和奖励模式判断。
 - `BACKEND_HANDOFF.md`：同伴当前提交情况、真实模型/视频/记忆/积分接口待办。
 - `DESIGN.md`：四角色素材和生成规格。
-- `tests/`：106项离线回归检查：前端与消息渲染、本机服务、review 闭环、AI Ping 配置与错误映射；不调用外网。
+- `tests/`：108项离线回归检查：前端与消息渲染、本机服务、review 闭环、AI Ping 配置与错误映射；不调用外网。
 - `scripts/README.md`：真实模型的基础闭环与5种固定合成对话评测；与离线测试分开运行。
 
 温和、奖励、督促三种陪伴方式已可选择；督促按天、自愿，可立即退出。成长值仅为自报生成的演示待核验记录，不能抵现或抵扣费用。视频只在本机保存回看，未接入 AI 分析。
@@ -76,7 +109,7 @@ node haipigua/preview.cjs
 node --test --test-isolation=none haipigua/tests/*.test.cjs
 ```
 
-当前106项通过。真实模型可用性和理解质量另行检查：先暂停浏览器里的模型发送，再运行 `node haipigua/scripts/evaluate-live.cjs --case route`；完整四轮去掉 `--case route`。2026-10-17当前版本基础四轮再次全部通过，共8次模型调用（3/2/2/1）：学习/创意分流、反馈保存、下一步根据反馈缩短、模糊时间追问。
+当前108项通过。真实模型可用性和理解质量另行检查：先暂停浏览器里的模型发送，再运行 `node haipigua/scripts/evaluate-live.cjs --case route`；完整四轮去掉 `--case route`。2026-10-17当前版本基础四轮再次全部通过，共8次模型调用（3/2/2/1）：学习/创意分流、反馈保存、下一步根据反馈缩短、模糊时间追问。
 
 另运行 `node haipigua/scripts/evaluate-conversations.cjs`，用固定2026-10-17上下文逐项检查只改建议、忙碌冲突、继续创意、假设忙碌、建议与真实忙碌并存。原来失败的前三条已连续复跑通过；完成忙碌覆盖复核的 JSON 输出修复后，当前五种固定样例5/5通过。浏览器求职场景也实际调用2次模型，生成“撰写嗨皮瓜项目卡”建议，明确没有预约，行动约定保持原有1项。任何评测失败均返回非零退出码。失败历史及修复状态见 `LIVE_VALIDATION.md`；合成结果分别保存在被 Git 忽略的 `.local/live-evaluation.json` 和 `.local/conversation-evaluation.json`，浏览器证据仅留本机。这些是有限样例的实际记录，不能推算泛化准确率或稳定性。
 

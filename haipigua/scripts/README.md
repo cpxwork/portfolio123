@@ -14,6 +14,15 @@ node preview.cjs
 
 保持上述终端开启。在第三个终端运行评测，并暂停浏览器里的模型请求，避免单并发服务互相占用。健康检查已配置不等于真实请求一定成功。
 
+成品服务（`node server/app.cjs`）的免费健康检查和最小真实调用验证：
+
+```powershell
+npm run verify
+$env:CONFIRM_LIVE="1"; node scripts/verify-product.cjs --live
+```
+
+第一条只读 `/api/health`，不花钱；第二条会发一次合成 review 请求，结果写入 `.local/product-verification.json`，记录真实平台、型号、调用次数、token 和估算费用。没有 `CONFIRM_LIVE=1` 不会调用模型。
+
 在 `haipigua` 目录使用 Node.js 20 或更高版本：
 
 ```powershell
@@ -64,4 +73,4 @@ node scripts/evaluate-review.cjs
 
 使用合成兴趣、任务和原话，经本机 `/api/agent` 串行调用真实模型，检查五件事：未预约练习是否保存 review 并同轮交接；只有15分钟没有内容是否追问且不伪造完成；表单“轻松”加文字“排线难”是否两条都保留；两个相近兴趣是否只问一次且不误绑；明确没作品时是否不评分。结果写入被忽略的 `.local/review-evaluation.json`，标准输出含 `case/success/checks/modelCalls/provider/model/estimatedCostCny/error`。任一检查或请求失败退出码为 `1`。真实模型输出有随机性，失败原样保留，不用 mock 或本地模板补成通过。
 
-离线回归使用 `node --test --test-isolation=none tests/*.test.cjs`，当前106项通过。这组测试使用 mock/本机 HTTP，不调用任何真实平台；它证明状态与边界检查，不替代真实模型评测。
+离线回归使用 `node --test --test-isolation=none tests/*.test.cjs`，当前108项通过。这组测试使用 mock/本机 HTTP，不调用任何真实平台；它证明状态与边界检查，不替代真实模型评测。

@@ -1,0 +1,15 @@
+{
+  "name": "haipigua",
+  "version": "1.0.0",
+  "private": true,
+  "description": "嗨皮瓜：四机器人学习/创意/反馈闭环，单进程页面 + AI Ping/智谱后端",
+  "main": "server/app.cjs",
+  "scripts": {
+    "start": "node server/app.cjs",
+    "verify": "node scripts/verify-product.cjs",
+    "test": "node --test --test-isolation=none tests/*.test.cjs"
+  },
+  "engines": {
+    "node": ">=20.12"
+  }
+}
