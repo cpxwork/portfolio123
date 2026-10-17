@@ -244,14 +244,14 @@ async function main() {
   });
 
   // ---------- 4. 强制升级 ----------
-  hr('第 4 步：L0→L4 强制升级（A-M4，strategist 模型决策）');
+  hr('第 4 步：L0→L5 强制升级（A-M4，strategist 模型决策）');
   const clock = fakeClock(Date.UTC(2026, 9, 16, 12, 0, 0));
   const esc = createEscalation({
     bus, executor, clock,
     options: {
       taskId: 'task_math',
       authorizeL4: true,
-      dailyCap: 3,
+      dailyCap: 4,
       l4Targets: [path.join(root, '游戏截图.png')],
       shuffleTargetDir: root,
       plan: planned,
@@ -260,12 +260,12 @@ async function main() {
   });
   let snap = await esc.escalateWithLlm({ llm, state: stateModel.state, confidence: stateModel.confidence, stateExplain: stateModel.explain, waitedMin: 0 });
   console.log('L0 ' + snap.status + ' | ' + snap.reason);
-  // 每级间隔：L0→L1 2min，L1→L2 3min，L2→L3 5min，L3→L4 5min。
+  // 每级间隔：L0→L1 2min，L1→L2 3min，L2→L3 5min，L3→L4 5min，L4→L5 5min。
   // 推进后若被时间门禁拦住（距上次升级不足），再推进一次即可——
   // 真实环境由定时器自动触发，不会被门禁拦。
   const steps = [
     { gap: 2, label: 'L1' }, { gap: 3, label: 'L2' },
-    { gap: 5, label: 'L3' }, { gap: 5, label: 'L4' }
+    { gap: 5, label: 'L3' }, { gap: 5, label: 'L4' }, { gap: 5, label: 'L5' }
   ];
   for (const s of steps) {
     clock.advance(s.gap * 60000);
@@ -279,11 +279,12 @@ async function main() {
     const st = esc.getState();
     console.log(s.label + ' → level=' + st.level + ' status=' + st.status + ' | ' + st.reason);
     if (st.level === 'L3') {
-      console.log('     L3 已打乱桌面文件: ' + fs.readdirSync(root).filter(f => /^shuffled-/.test(f)).join(', '));
+      console.log('     L3 = screen_flash（整机闪屏，B 侧前端渲染，A 侧不落地、不动文件）');
+      console.log('     L4 已打乱桌面文件: ' + fs.readdirSync(root).filter(f => /^shuffled-/.test(f)).join(', '));
     }
-    if (st.level === 'L4') {
+    if (st.level === 'L5') {
       const moved = fs.existsSync(path.join(root, '游戏截图.png'));
-      console.log('     L4 已隔离指定文件（加密）: 游戏截图.png → .quarantine/<manifestId>/');
+      console.log('     L5 已隔离指定文件（加密）: 游戏截图.png → .quarantine/<manifestId>/');
       console.log('     原位还在吗:', moved ? '在（异常）' : '不在（正确）');
     }
   }

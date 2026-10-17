@@ -24,8 +24,8 @@
 const path = require('path');
 const { STATES, SOURCES, isoWithOffset, parseIso } = require('./instructions');
 
-/** 强制级别枚举（与 A-M4 escalation 的 L0..L4 对应） */
-const FORCED_LEVELS = ['L0', 'L1', 'L2', 'L3', 'L4'];
+/** 强制级别枚举（与 A-M4 escalation 的 L0..L5 对应） */
+const FORCED_LEVELS = ['L0', 'L1', 'L2', 'L3', 'L4', 'L5'];
 
 /** 采集策略常量（PLAN-A 3.2） */
 const POLL_INTERVAL_MS = 60 * 1000;        // 常规轮询：每 60s 抓 1 帧

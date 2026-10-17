@@ -72,7 +72,7 @@
 | A-M3 状态驱动拆步 | ✅ | task-planner 15 |
 | A-M4 强制升级状态机 | ✅ | escalation 12 |
 | A-M5 审计与误判申诉 | ✅ | audit 9 |
-| demo.js 完整闭环 | ✅ | 聊天→状态→拆步→L0..L4→revoke_all→sha256 校验全通过 |
+| demo.js 完整闭环 | ✅ | 聊天→状态→拆步→L0..L5→revoke_all→sha256 校验全通过 |
 
 **总入口**：`node run-tests.js` → 8 套测试全绿。
 
@@ -108,7 +108,7 @@
 模型可以决定"现在该提醒还是该升级"，但下面这些是**物理闸门**，模型无权绕过：
 
 1. **时序门禁**：L0→L1 必须间隔 ≥2min、L1→L2 ≥3min、L2→L3 ≥5min、L3→L4 ≥5min。模型说"立刻 L4"也发不出去。
-2. **单日上限 3 次**（L2+）与 **L4 授权**：这两个是用户授权边界，不是模型判断。
+2. **单日上限 4 次**（L2+）与 **L5 隔离授权**：这两个是用户授权边界，不是模型判断。
 3. **`revoke_all` 永不被模型禁止**：任何一步完成信号到达，必须立即全量还原。
 4. **模型只能选 level，不能选 action**：action 由 level 映射表决定（防模型自造动作）。
 5. **L4 的 targets 只能来自用户预先配置**，模型不能自行挑选要隔离的文件。
@@ -169,7 +169,7 @@ A-M1 子代理（206e33bf）按用户指示停手并交付盘点。处理结果�
 - 遗留规则套件（离线回归）：instructions 13 / manifest 8 / executor 23 / crypto-vault 10 / state-sensor 47 / task-planner 15 / escalation 12 / audit 9
 - 模型路径套件（桩 LLM，不发网络请求）：chat-sense 19 / llm-client 17 / task-planner-llm 15 / escalation-llm 15
 
-**demo 双模式**：`node demo.js` 走桩 LLM 全链路（提取→状态→拆步→L0→L4 逐级升级→L3 洗牌/L4 隔离→revoke 恢复 restored:3 lost:0，sha256 一致）；`node demo.js --llm` 走真实 API（`LLM_API_BASE`/`LLM_API_KEY`，视觉走 `VISION_*`）。模型不可用 → `process.exit(2)` 显式报错，**绝不静默回退规则**（用户"纯模型，删掉兜底"）。
+**demo 双模式**：`node demo.js` 走桩 LLM 全链路（提取→状态→拆步→L0→L5 逐级升级→L4 洗牌/L5 隔离→revoke 恢复 restored:3 lost:0，sha256 一致）；`node demo.js --llm` 走真实 API（`LLM_API_BASE`/`LLM_API_KEY`，视觉走 `VISION_*`）。模型不可用 → `process.exit(2)` 显式报错，**绝不静默回退规则**（用户"纯模型，删掉兜底"）。
 
 **escalateWithLlm 实现要点 / 踩坑记录**（后续改动升级逻辑者必读）：
 1. 5 条物理闸门是硬性设计约定，模型永远只选 `level`，不选 `action`；L4 `targets` 只来自 `options.l4Targets`。
@@ -270,3 +270,16 @@ A-M1 子代理（206e33bf）按用户指示停手并交付盘点。处理结果�
 - 冒烟手算吻合：interval(S=5,R=0.9)→5 天（定义自证）；score(6,2,c4,age2,streak2,reps8)→know=0.7575、S=7.359、retention=0.7620、score=0.7589 全对上。单次调用 634ms（dotnet 冷启动，5s 超时裕度足）。
 
 **score cmd 对齐上游修正（04:50，推翻本条目上面的"score 实现决策"）**：任务书 §3.2 散文公式与上游 `MasteryCalculator.ComputeScore`（score-v2）有三处实质差异，**以上游为准重写 CmdScore**：① Beta 后验均值用 Jeffreys 先验 `(s+0.5)/(s+f+1)`（非 s/(s+f)）；② prereqSupport=(1-λ)·mean+λ·min（λ=PrereqWeakMix=0.65，非纯 mean）；③ **无先修时 prereqSupport 中性 0.5、ceiling=1.0（不封顶）**——任务书"无图谱退化 prereqSupport=know"与上游不符，不采纳。参数形状相应改为 `{attempts, successes, confidence, lastAgeDays, streak, prereqScores?}`（successes 自动 clamp 到 [0,attempts]；S 公式的 n=max(attempts,1)）。修正后手算：emp=0.7222、know=0.7339、score=0.6956（无先修）/0.6766（先修[0.9,0.3]，ceiling=0.685 生效前 raw 已更低）。ScoreCalculator（RecentAcc/Sev/SelfConf 口径）是另一套销账评分，与 score cmd 无关。
+
+### 2026-10-17 10:45 | M-K 步骤③收口：金样 91 测试全绿
+
+**`learning-kernel.Tests`（xUnit，net10.0）**：`dotnet test` → **91 通过 / 0 失败 / 0 跳过 / 5s**。构成：71 组进程级金样（review 14 / interval 14 / score 13 / transition 15 / scanDebts 11 / optimize 4）+ 20 组内核合同测试（`golden/errors.json`：未知 cmd、空 stdin、非 JSON、参数越界、图环、state 越界、buildGraph 未实现等）。
+
+**期望值独立性**：`learning-kernel.Tests/gen-golden.mjs` 用 JS 按 FSRS-6 论文公式 / FormulaConstants / sale-v2 / impact-v2 **独立重写**后算出（不读 C# 输出）。只有常量数组本身（w0-w20、FormulaConstants 值）与上游一致——那是定义不是推导。optimize 是迭代优化器（Adam 全批），数值期望不可独立复算 → 4 组里 2 组"精确期望"（空序列/全 same-day 退化路径：examples=0 + usedDefault + weights==默认 21 值精确比）、2 组"结构断言"（examples 精确 + iterations≥1 + weights 落在 Lower/Upper 盒内 + improved⇒finalLoss<initialLoss）。
+
+**踩到的三个坑（都已修，写进测试注释）**：
+1. **路径层数**：`KernelRunner.KernelDll()` 原向上数 5 级，实际 4 级到 discipline-agent（BaseDirectory=`Tests/bin/Debug/net10.0`）→ 改为"向上找含 `learning-kernel/` 的祖先"，不依赖层数。
+2. **UTF-8 BOM**：`StandardInputEncoding = Encoding.UTF8` 会写 BOM（EF BB BF），内核报"JSON 解析失败: '0xEF' is an invalid start of a value"。双修：内核 `ReadToEnd().TrimStart('\uFEFF')`（协议健壮）+ 测试侧 `new UTF8Encoding(false)`。
+3. **`GetRawText()` 不可用于跨进程比较**：内核 stdout 中文是 `\uXXXX` 转义，金样文件（JS 写出）是原文中文，GetRawText 返回原始输入片段不反转义 → "Strings differ (pos 1)"。改为语义比较（String 走 GetString()；bool/null 比 ValueKind）。
+
+**DeepAssert 约定**：数值容差 1e-6（FormulaConstants.GoldenTolerance）；对象只比 expect 列出的字段（内核可多返回字段）；数组长度相等；字符串语义相等。

@@ -20,7 +20,10 @@ const SUITES = [
   // 模型路径（架构变更：纯规则 → 多模型协作）
   'llm-client.test.js',
   'task-planner-llm.test.js',
-  'escalation-llm.test.js'
+  'escalation-llm.test.js',
+  // M-K 学习子系统（Node↔C# 内核 + 学习记录存储）
+  'learning-kernel.test.js',
+  'learning-store.test.js'
 ];
 
 let failed = 0;

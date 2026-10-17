@@ -24,12 +24,13 @@ suite.before(() => {
 suite.after(() => rmrf(root));
 
 suite.test('action 枚举与 level 映射与契约定死一致', () => {
-  equal(ACTIONS.length, 6, 'action 数量');
+  equal(ACTIONS.length, 7, 'action 数量');
   equal(LEVEL_ACTION.L0, 'notify', 'L0→notify');
   equal(LEVEL_ACTION.L1, 'popup_countdown', 'L1→popup_countdown');
   equal(LEVEL_ACTION.L2, 'spawn_bugs', 'L2→spawn_bugs');
-  equal(LEVEL_ACTION.L3, 'shuffle_desktop', 'L3→shuffle_desktop');
-  equal(LEVEL_ACTION.L4, 'quarantine_files', 'L4→quarantine_files');
+  equal(LEVEL_ACTION.L3, 'screen_flash', 'L3→screen_flash');
+  equal(LEVEL_ACTION.L4, 'shuffle_desktop', 'L4→shuffle_desktop');
+  equal(LEVEL_ACTION.L5, 'quarantine_files', 'L5→quarantine_files');
   equal(ACTION_LEVEL.revoke_all, null, 'revoke_all 无 level');
 });
 

@@ -1,33 +1,33 @@
 'use strict';
 /**
- * escalation.js —— L0→L4 升级规则状态机 + 与 bus/executor 联动（A-M4 交付）
+ * escalation.js —— L0→L5 升级规则状态机 + 与 bus/executor 联动（A-M4 交付）
  *
  * 铁律：
  *   1. **纯规则、不用 LLM**——强制动作必须可预测、可解释。
  *   2. 时钟/定时器可注入（测试用假时钟手动触发）。
- *   3. 时序：L0 → +2min → L1 → +3min → L2 → +5min → L3 → +5min → L4。
+ *   3. 时序：L0 → +2min → L1 → +3min → L2 → +5min → L3 → +5min → L4 → +5min → L5。
  *   4. 挂起/恢复由 strategist 模型决策（suspend 字段），不在状态机里写死；
  *      L2 以后只看步骤完成信号，不看画面。
- *   5. 单日强制（L2+）上限 3 次，达到后当天封顶 L1。
- *   6. L4 需 authorizeL4，未授权封顶 L3。
+ *   5. 单日强制（L2+）上限 4 次（L2→L5 全链各一次），达到后当天封顶 L1。
+ *   6. L5（隔离）需授权（选项名沿用 authorizeL4），未授权封顶 L4。
  *   7. 任一步完成 → revoke_all + 清定时器 + 停状态机。
- *   8. 每次 L3/L4 执行先写 manifest 再动手（由 executor 保证）。
+ *   8. 每次 L4/L5（本地破坏性动作）执行先写 manifest 再动手（由 executor 保证）；L3 screen_flash 为前端表现动作。
  *   9. 摄像头证据**不能单独**触发 L2+：必须已有步骤完成信号缺失的计时，且
  *      当前步骤处于"已下发但未完成"状态。
  */
 
 const { createInstructionBus, isoWithOffset } = require('./instructions');
 
-/** 级别顺序与间隔（分钟） */
-const LEVEL_ORDER = Object.freeze(['L0', 'L1', 'L2', 'L3', 'L4']);
-const GAP_MINUTES = Object.freeze({ L0: 0, L1: 2, L2: 3, L3: 5, L4: 5 });
+/** 级别顺序与间隔（分钟）——2026-10-17 契约：screen_flash 插入 L3，shuffle/quarantine 顺移 L4/L5 */
+const LEVEL_ORDER = Object.freeze(['L0', 'L1', 'L2', 'L3', 'L4', 'L5']);
+const GAP_MINUTES = Object.freeze({ L0: 0, L1: 2, L2: 3, L3: 5, L4: 5, L5: 5 });
 const LEVEL_ACTION = Object.freeze({
   L0: 'notify', L1: 'popup_countdown', L2: 'spawn_bugs',
-  L3: 'shuffle_desktop', L4: 'quarantine_files'
+  L3: 'screen_flash', L4: 'shuffle_desktop', L5: 'quarantine_files'
 });
 /** 单日强制上限：L2 及以上算"强制" */
-const FORCED_LEVELS = Object.freeze(['L2', 'L3', 'L4']);
-const DAILY_FORCED_CAP = 3;
+const FORCED_LEVELS = Object.freeze(['L2', 'L3', 'L4', 'L5']);
+const DAILY_FORCED_CAP = 4;   // 2026-10-17 契约：L2..L5 全链 4 级，每日上限同步 3→4
 
 /** 状态机状态 */
 const STATUS = Object.freeze({
@@ -123,9 +123,9 @@ function createEscalation(opts) {
     return forcedByDate.get(d);
   }
 
-  /** 当前允许达到的最高级别（单日上限 / 授权封顶） */
+  /** 当前允许达到的最高级别（单日上限 / 授权封顶）；授权选项名沿用 authorizeL4，现契约对应 L5 quarantine */
   function capLevel(level) {
-    if (level === 'L4' && !authorizeL4) return 'L3';
+    if (level === 'L5' && !authorizeL4) return 'L4';
     if (FORCED_LEVELS.indexOf(level) !== -1 && forcedCountToday() >= dailyCap) return 'L1';
     return level;
   }
@@ -133,8 +133,8 @@ function createEscalation(opts) {
   function issueFor(level) {
     const capped = capLevel(level);
     if (capped !== level) {
-      reason = (level === 'L4' && !authorizeL4)
-        ? 'L4 未授权，封顶 L3'
+      reason = (level === 'L5' && !authorizeL4)
+        ? 'L5 未授权，封顶 L4'
         : '单日强制（L2+）已达上限 ' + dailyCap + ' 次，当天封顶 L1';
       status = STATUS.CAPPED;
       snapshot({ cappedFrom: level, cappedTo: capped });
@@ -142,8 +142,8 @@ function createEscalation(opts) {
     }
     const action = LEVEL_ACTION[capped];
     let payload = null;
-    if (capped === 'L3') payload = shuffleTargetDir ? { targetDir: shuffleTargetDir } : {};
-    if (capped === 'L4') payload = { targets: l4Targets };
+    if (capped === 'L4') payload = shuffleTargetDir ? { targetDir: shuffleTargetDir } : {};
+    if (capped === 'L5') payload = { targets: l4Targets };
     // 契约要求非 revoke_all 指令必须带 step 对象；计划缺失时给一个占位步，
     // 保证"判定到点"这类没有具体步骤的场景也能合法下发。
     // stateAtPlan 必须落在状态枚举内，取 stateEvidence.state，缺省 unknown。
@@ -153,7 +153,7 @@ function createEscalation(opts) {
       ? { index: currentStep.index, label: currentStep.label, stateAtPlan: stateAtPlan }
       : { index: 0, label: '开始当前任务', stateAtPlan };
     const nxt = nextLevel(capped);
-    // L4 是顶级，没有下一级，expiresAt 用本级间隔兜底（不能算成 NaN）
+    // L5 是顶级，没有下一级，expiresAt 用本级间隔兜底（不能算成 NaN）
     const gapForExpiry = nxt ? GAP_MINUTES[nxt] : GAP_MINUTES[capped];
     const ins = bus.issue({
       id: 'ins_' + taskId + '_' + capped + '_' + Math.abs(clock.now()).toString(36),
@@ -163,7 +163,7 @@ function createEscalation(opts) {
       step: stepObj,
       issuedAt: isoWithOffset(new Date(clock.now())),
       expiresAt: isoWithOffset(new Date(clock.now() + gapForExpiry * 60000)),
-      reversible: capped === 'L3' || capped === 'L4',
+      reversible: capped === 'L4' || capped === 'L5',
       manifestId: null,
       payload,
       reason,
@@ -180,7 +180,7 @@ function createEscalation(opts) {
     return i >= 0 && i + 1 < LEVEL_ORDER.length ? LEVEL_ORDER[i + 1] : null;
   }
 
-  /** 真正执行本地动作（L3/L4），由 executor 落地 */
+  /** 真正执行本地动作（L4/L5）；L3 screen_flash 是前端表现动作，A 侧不落地 */
   function runLocal(ins) {
     if (!ins) return null;
     const rec = bus.get(ins.id);
@@ -201,7 +201,7 @@ function createEscalation(opts) {
    * 进入下一级（机械执行 + 物理闸门，不含决策）。
    *
    * 决策由 escalateWithLlm（strategist 模型）给出；本函数只负责：
-   * 时间门禁 / 单日上限 / L4 授权封顶（物理闸门）→ 下发指令 → 落地 → 记快照。
+   * 时间门禁 / 单日上限 / L5 授权封顶（物理闸门）→ 下发指令 → 落地 → 记快照。
    * 原"自动升级定时器链"已按纯模型架构删除：升级时机一律由模型决策，
    * tick() 仅作为测试/联调的手动推进入口。
    */
@@ -213,7 +213,7 @@ function createEscalation(opts) {
     const to = from === null ? 'L0' : nextLevel(from);
     if (!to) {
       status = STATUS.CAPPED;
-      reason = 'L4 已在执行中（最高强制级），无下一级可升，本次不升级';
+      reason = 'L5 已在执行中（最高强制级），无下一级可升，本次不升级';
       return snapshot();
     }
     // 时间门禁：手动 tick 也不能跳过真实间隔，否则"每级之间留足等待时间"失效
@@ -234,7 +234,7 @@ function createEscalation(opts) {
 
     if (!nextLevel(to)) {
       status = STATUS.CAPPED;
-      reason = 'L4 已下发并执行（最高强制级），无下一级可升，等待用户完成步骤';
+      reason = 'L5 已下发并执行（最高强制级），无下一级可升，等待用户完成步骤';
     }
     return snapshot();
   }
@@ -296,10 +296,10 @@ function createEscalation(opts) {
    * 但下面这些是**物理闸门**，模型无权绕过（NOTES.md 架构变更记录）：
    *   1. 步骤已完成 → 无条件 revoke_all（模型说了不算）
    *   2. 时间门禁：距上次升级不足该级间隔，不许升
-   *   3. 单日上限 + L4 授权（capLevel）
+   *   3. 单日上限 + L5 授权（capLevel）
    *   4. action 由 level 映射表决定，模型不能自选动作
-   *   5. L4 targets 只来自 options.l4Targets
-   *   6. level 只认 L0..L4，其他值一律当 null（不动）
+   *   5. L5 targets 只来自 options.l4Targets（选项名沿用 authorizeL4）
+   *   6. level 只认 L0..L5，其他值一律当 null（不动）
    *
    * @param {object} ctx 态势（模型看的输入）：
    *   { state, confidence, stateExplain, waitedMin, llm }
@@ -373,7 +373,7 @@ function createEscalation(opts) {
     }
     if (wantLevel !== naturalNext) {
       // 模型想跳级：临时把当前级视为目标级的前一级，让 escalate 直接发目标级。
-      // 闸门仍然兜住：时间门禁按目标级间隔检查；capLevel 检查单日上限与 L4 授权。
+      // 闸门仍然兜住：时间门禁按目标级间隔检查；capLevel 检查单日上限与 L5 授权。
       const savedFrom = currentLevel;
       currentLevel = LEVEL_ORDER[LEVEL_ORDER.indexOf(wantLevel) - 1];
       let snap = escalate();

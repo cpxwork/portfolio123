@@ -150,6 +150,9 @@ function debtImpact(e) {
   return IMP.Base * readiness * gap * Math.max(e.weight, 0) * cross * cascade * volume;
 }
 const debtFull = e => { const impact = debtImpact(e); return { impact, hit: e.freq > 0 && impact >= IMP.Hit }; };
+/** cmd 返回 {debts, hitCount, count}；期望只列 debts 的 impact/hit 与 hitCount（其余字段忽略） */
+const scanExpect = edges => ({ debts: edges.map(e => debtFull(e)), hitCount: edges.filter(e => debtFull(e).hit).length });
+const scanExpect0 = e => scanExpect([e]);
 
 // ═══════════════ 用例表 ═══════════════
 const round = v => (typeof v === 'number' ? Number(v.toPrecision(12)) : v); // JSON 往返稳定
@@ -226,25 +229,25 @@ const transitions = [
 ];
 
 const scanDebts = [
-  { name: 'zero-freq', args: { edges: [{ scoreFrom: 0.9, scoreTo: 0.3, weight: 1.0, edgeType: 'prerequisite', freq: 0 }] }, expect: debtFull({ scoreFrom: 0.9, scoreTo: 0.3, weight: 1.0, edgeType: 'prerequisite', freq: 0, downstreamCount: 0 }) },
-  { name: 'strong-parent-weak-child', args: { edges: [{ scoreFrom: 0.9, scoreTo: 0.3, weight: 1.0, edgeType: 'prerequisite', freq: 3 }] }, expect: debtFull({ scoreFrom: 0.9, scoreTo: 0.3, weight: 1.0, edgeType: 'prerequisite', freq: 3, downstreamCount: 0 }) },
-  { name: 'weak-parent', args: { edges: [{ scoreFrom: 0.3, scoreTo: 0.3, weight: 1.0, edgeType: 'prerequisite', freq: 3 }] }, expect: debtFull({ scoreFrom: 0.3, scoreTo: 0.3, weight: 1.0, edgeType: 'prerequisite', freq: 3, downstreamCount: 0 }) },
-  { name: 'strong-child', args: { edges: [{ scoreFrom: 0.9, scoreTo: 0.9, weight: 1.0, edgeType: 'prerequisite', freq: 3 }] }, expect: debtFull({ scoreFrom: 0.9, scoreTo: 0.9, weight: 1.0, edgeType: 'prerequisite', freq: 3, downstreamCount: 0 }) },
-  { name: 'transfer-gap-multiplier', args: { edges: [{ scoreFrom: 0.9, scoreTo: 0.3, weight: 1.0, edgeType: 'transferGap', freq: 3 }] }, expect: debtFull({ scoreFrom: 0.9, scoreTo: 0.3, weight: 1.0, edgeType: 'transferGap', freq: 3, downstreamCount: 0 }) },
-  { name: 'cascade-downstream', args: { edges: [{ scoreFrom: 0.9, scoreTo: 0.3, weight: 1.0, edgeType: 'prerequisite', freq: 3, downstreamCount: 5 }] }, expect: debtFull({ scoreFrom: 0.9, scoreTo: 0.3, weight: 1.0, edgeType: 'prerequisite', freq: 3, downstreamCount: 5 }) },
-  { name: 'heavy-volume', args: { edges: [{ scoreFrom: 0.9, scoreTo: 0.3, weight: 1.0, edgeType: 'prerequisite', freq: 20 }] }, expect: debtFull({ scoreFrom: 0.9, scoreTo: 0.3, weight: 1.0, edgeType: 'prerequisite', freq: 20, downstreamCount: 0 }) },
-  { name: 'negative-weight-zeroed', args: { edges: [{ scoreFrom: 0.9, scoreTo: 0.3, weight: -1, edgeType: 'prerequisite', freq: 3 }] }, expect: debtFull({ scoreFrom: 0.9, scoreTo: 0.3, weight: -1, edgeType: 'prerequisite', freq: 3, downstreamCount: 0 }) },
+  { name: 'zero-freq', args: { edges: [{ scoreFrom: 0.9, scoreTo: 0.3, weight: 1.0, edgeType: 'prerequisite', freq: 0 }] }, expect: scanExpect0({ scoreFrom: 0.9, scoreTo: 0.3, weight: 1.0, edgeType: 'prerequisite', freq: 0, downstreamCount: 0 }) },
+  { name: 'strong-parent-weak-child', args: { edges: [{ scoreFrom: 0.9, scoreTo: 0.3, weight: 1.0, edgeType: 'prerequisite', freq: 3 }] }, expect: scanExpect0({ scoreFrom: 0.9, scoreTo: 0.3, weight: 1.0, edgeType: 'prerequisite', freq: 3, downstreamCount: 0 }) },
+  { name: 'weak-parent', args: { edges: [{ scoreFrom: 0.3, scoreTo: 0.3, weight: 1.0, edgeType: 'prerequisite', freq: 3 }] }, expect: scanExpect0({ scoreFrom: 0.3, scoreTo: 0.3, weight: 1.0, edgeType: 'prerequisite', freq: 3, downstreamCount: 0 }) },
+  { name: 'strong-child', args: { edges: [{ scoreFrom: 0.9, scoreTo: 0.9, weight: 1.0, edgeType: 'prerequisite', freq: 3 }] }, expect: scanExpect0({ scoreFrom: 0.9, scoreTo: 0.9, weight: 1.0, edgeType: 'prerequisite', freq: 3, downstreamCount: 0 }) },
+  { name: 'transfer-gap-multiplier', args: { edges: [{ scoreFrom: 0.9, scoreTo: 0.3, weight: 1.0, edgeType: 'transferGap', freq: 3 }] }, expect: scanExpect0({ scoreFrom: 0.9, scoreTo: 0.3, weight: 1.0, edgeType: 'transferGap', freq: 3, downstreamCount: 0 }) },
+  { name: 'cascade-downstream', args: { edges: [{ scoreFrom: 0.9, scoreTo: 0.3, weight: 1.0, edgeType: 'prerequisite', freq: 3, downstreamCount: 5 }] }, expect: scanExpect0({ scoreFrom: 0.9, scoreTo: 0.3, weight: 1.0, edgeType: 'prerequisite', freq: 3, downstreamCount: 5 }) },
+  { name: 'heavy-volume', args: { edges: [{ scoreFrom: 0.9, scoreTo: 0.3, weight: 1.0, edgeType: 'prerequisite', freq: 20 }] }, expect: scanExpect0({ scoreFrom: 0.9, scoreTo: 0.3, weight: 1.0, edgeType: 'prerequisite', freq: 20, downstreamCount: 0 }) },
+  { name: 'negative-weight-zeroed', args: { edges: [{ scoreFrom: 0.9, scoreTo: 0.3, weight: -1, edgeType: 'prerequisite', freq: 3 }] }, expect: scanExpect0({ scoreFrom: 0.9, scoreTo: 0.3, weight: -1, edgeType: 'prerequisite', freq: 3, downstreamCount: 0 }) },
   { name: 'batch-mixed', args: { edges: [
     { scoreFrom: 0.9, scoreTo: 0.3, weight: 1.0, edgeType: 'prerequisite', freq: 4, downstreamCount: 2 },
     { scoreFrom: 0.4, scoreTo: 0.45, weight: 0.8, edgeType: 'transferGap', freq: 1 },
     { scoreFrom: 0.7, scoreTo: 0.7, weight: 1.2, edgeType: 'prerequisite', freq: 0 }] },
-    expect: [
-      debtFull({ scoreFrom: 0.9, scoreTo: 0.3, weight: 1.0, edgeType: 'prerequisite', freq: 4, downstreamCount: 2 }),
-      debtFull({ scoreFrom: 0.4, scoreTo: 0.45, weight: 0.8, edgeType: 'transferGap', freq: 1, downstreamCount: 0 }),
-      debtFull({ scoreFrom: 0.7, scoreTo: 0.7, weight: 1.2, edgeType: 'prerequisite', freq: 0, downstreamCount: 0 })
-    ] },
-  { name: 'all-mid-neutral', args: { edges: [{ scoreFrom: 0.55, scoreTo: 0.50, weight: 1.0, edgeType: 'prerequisite', freq: 1 }] }, expect: debtFull({ scoreFrom: 0.55, scoreTo: 0.50, weight: 1.0, edgeType: 'prerequisite', freq: 1, downstreamCount: 0 }) },
-  { name: 'extreme-weak-parent', args: { edges: [{ scoreFrom: 0.0, scoreTo: 0.0, weight: 1.0, edgeType: 'prerequisite', freq: 2 }] }, expect: debtFull({ scoreFrom: 0.0, scoreTo: 0.0, weight: 1.0, edgeType: 'prerequisite', freq: 2, downstreamCount: 0 }) },
+    expect: scanExpect([
+      { scoreFrom: 0.9, scoreTo: 0.3, weight: 1.0, edgeType: 'prerequisite', freq: 4, downstreamCount: 2 },
+      { scoreFrom: 0.4, scoreTo: 0.45, weight: 0.8, edgeType: 'transferGap', freq: 1, downstreamCount: 0 },
+      { scoreFrom: 0.7, scoreTo: 0.7, weight: 1.2, edgeType: 'prerequisite', freq: 0, downstreamCount: 0 }
+    ]) },
+  { name: 'all-mid-neutral', args: { edges: [{ scoreFrom: 0.55, scoreTo: 0.50, weight: 1.0, edgeType: 'prerequisite', freq: 1 }] }, expect: scanExpect0({ scoreFrom: 0.55, scoreTo: 0.50, weight: 1.0, edgeType: 'prerequisite', freq: 1, downstreamCount: 0 }) },
+  { name: 'extreme-weak-parent', args: { edges: [{ scoreFrom: 0.0, scoreTo: 0.0, weight: 1.0, edgeType: 'prerequisite', freq: 2 }] }, expect: scanExpect0({ scoreFrom: 0.0, scoreTo: 0.0, weight: 1.0, edgeType: 'prerequisite', freq: 2, downstreamCount: 0 }) },
 ];
 
 // optimize：结构断言金样（期望值非数值，由测试代码断言结构性质；精确数值期望仅 O1 空序列）

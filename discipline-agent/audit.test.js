@@ -63,7 +63,7 @@ suite.test('一次强制的四段链路可查：依据→指令→执行→还�
   // 1) 依据
   a2.recordDecision({ taskId: 'tt', state: 'lying_bed', confidence: 0.8, source: 'time_rules', evidence: 'inactive:20min', explain: '20 分钟无操作' });
   // 2) 指令 + 执行
-  const ins = b.issue({ id: 'ins_q', level: 'L4', action: 'quarantine_files', taskId: 'tt', step: { index: 0, label: '坐起来', stateAtPlan: 'lying_bed' }, issuedAt: '2026-10-16T20:30:00+08:00', expiresAt: '2026-10-16T20:35:00+08:00', reversible: true, payload: { targets: [path.join(r, 'note.txt')] }, reason: 'L3 后仍无响应' });
+  const ins = b.issue({ id: 'ins_q', level: 'L5', action: 'quarantine_files', taskId: 'tt', step: { index: 0, label: '坐起来', stateAtPlan: 'lying_bed' }, issuedAt: '2026-10-16T20:30:00+08:00', expiresAt: '2026-10-16T20:35:00+08:00', reversible: true, payload: { targets: [path.join(r, 'note.txt')] }, reason: 'L4 后仍无响应' });
   b.ack(ins.id, { by: 'executor' });
   const out = e.execute(b.get(ins.id));
   b.complete(ins.id, { ok: out.ok, manifestId: out.manifestId });
@@ -122,7 +122,7 @@ suite.test('forcedCount 统计 L2+ 次数', () => {
   const r = tmpDir('dsc-audit3-');
   const a3 = createAuditLog({ path: path.join(r, 'a.jsonl') });
   const b = createInstructionBus({ logPath: path.join(r, 'b.jsonl') });
-  for (const [i, lvl] of [['L0', 'notify'], ['L1', 'popup_countdown'], ['L2', 'spawn_bugs'], ['L3', 'shuffle_desktop']].entries()) {
+  for (const [i, lvl] of [['L0', 'notify'], ['L1', 'popup_countdown'], ['L2', 'spawn_bugs'], ['L3', 'screen_flash']].entries()) {
     b.issue({ id: 'i' + i, level: lvl[0], action: lvl[1], taskId: 't', step: { index: 0, label: 'x' }, issuedAt: '2026-10-16T20:30:00+08:00', reversible: false });
   }
   // 把 bus 的审计行并入 audit 视角（同一文件更简单，这里直接读 bus 的行验证口径）

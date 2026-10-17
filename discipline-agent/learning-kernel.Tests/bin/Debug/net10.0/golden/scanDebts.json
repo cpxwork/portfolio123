@@ -13,8 +13,13 @@
       ]
     },
     "expect": {
-      "impact": 0,
-      "hit": false
+      "debts": [
+        {
+          "impact": 0,
+          "hit": false
+        }
+      ],
+      "hitCount": 0
     }
   },
   {
@@ -31,8 +36,13 @@
       ]
     },
     "expect": {
-      "impact": 0.479219339204,
-      "hit": true
+      "debts": [
+        {
+          "impact": 0.479219339204,
+          "hit": true
+        }
+      ],
+      "hitCount": 1
     }
   },
   {
@@ -49,8 +59,13 @@
       ]
     },
     "expect": {
-      "impact": 0.0605980805513,
-      "hit": false
+      "debts": [
+        {
+          "impact": 0.0605980805513,
+          "hit": false
+        }
+      ],
+      "hitCount": 0
     }
   },
   {
@@ -67,8 +82,13 @@
       ]
     },
     "expect": {
-      "impact": 0.0225583618505,
-      "hit": false
+      "debts": [
+        {
+          "impact": 0.0225583618505,
+          "hit": false
+        }
+      ],
+      "hitCount": 0
     }
   },
   {
@@ -85,8 +105,13 @@
       ]
     },
     "expect": {
-      "impact": 0.551102240085,
-      "hit": true
+      "debts": [
+        {
+          "impact": 0.551102240085,
+          "hit": true
+        }
+      ],
+      "hitCount": 1
     }
   },
   {
@@ -104,8 +129,13 @@
       ]
     },
     "expect": {
-      "impact": 0.582256833867,
-      "hit": true
+      "debts": [
+        {
+          "impact": 0.582256833867,
+          "hit": true
+        }
+      ],
+      "hitCount": 1
     }
   },
   {
@@ -122,8 +152,13 @@
       ]
     },
     "expect": {
-      "impact": 0.536445186681,
-      "hit": true
+      "debts": [
+        {
+          "impact": 0.536445186681,
+          "hit": true
+        }
+      ],
+      "hitCount": 1
     }
   },
   {
@@ -140,8 +175,13 @@
       ]
     },
     "expect": {
-      "impact": 0,
-      "hit": false
+      "debts": [
+        {
+          "impact": 0,
+          "hit": false
+        }
+      ],
+      "hitCount": 0
     }
   },
   {
@@ -172,20 +212,23 @@
         }
       ]
     },
-    "expect": [
-      {
-        "impact": 0.551112442084,
-        "hit": true
-      },
-      {
-        "impact": 0.0740105645378,
-        "hit": false
-      },
-      {
-        "impact": 0,
-        "hit": false
-      }
-    ]
+    "expect": {
+      "debts": [
+        {
+          "impact": 0.551112442084,
+          "hit": true
+        },
+        {
+          "impact": 0.0740105645378,
+          "hit": false
+        },
+        {
+          "impact": 0,
+          "hit": false
+        }
+      ],
+      "hitCount": 1
+    }
   },
   {
     "name": "all-mid-neutral",
@@ -201,8 +244,13 @@
       ]
     },
     "expect": {
-      "impact": 0.145124618986,
-      "hit": true
+      "debts": [
+        {
+          "impact": 0.145124618986,
+          "hit": true
+        }
+      ],
+      "hitCount": 1
     }
   },
   {
@@ -219,8 +267,13 @@
       ]
     },
     "expect": {
-      "impact": 0.00712639054505,
-      "hit": false
+      "debts": [
+        {
+          "impact": 0.00712639054505,
+          "hit": false
+        }
+      ],
+      "hitCount": 0
     }
   }
 ]

@@ -13,7 +13,7 @@
 
 **五条物理闸门（硬性设计约定，模型不可绕过）**：
 1. 级间隔：L0→2min→L1→3min→L2→5min→L3→5min→L4（`GAP_MINUTES`）；
-2. 单日强制（L2+）上限 3 次，达到当天封顶 L1（`forcedByDate` 可注入共享 Map，跨任务生效）；
+2. 单日强制（L2+）上限 4 次，达到当天封顶 L1（`forcedByDate` 可注入共享 Map，跨任务生效）；
 3. L4 需 `authorizeL4`，未授权封顶 L3；
 4. 模型只选 `level`，永远不选 `action`（action 由 `LEVEL_ACTION` 确定性映射）；
 5. L4 `targets` 只来自 `options.l4Targets` 白名单。

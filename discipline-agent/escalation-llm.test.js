@@ -11,7 +11,7 @@
  *   - 模型给非法 level → 当不动
  *   - 模型想跳级 → 时间门禁按目标级间隔拦
  *   - 模型不可用 → 不退回规则链，亮出错误
- *   - L4 未授权 → 封顶 L3（模型说了不算）
+ *   - L5 未授权 → 封顶 L4（模型说了不算）
  *   - 模型不能自选 action（action 由 level 映射）
  */
 
@@ -208,55 +208,55 @@ suite.test('闸门：跳级但间隔够 → 一次到位且真实执行', async 
   try {
     env.esc.start();                                   // L0
     env.clock.clearAll();                               // 清自动链，纯时间推进
-    env.clock.advance(5 * 60000);                       // 等够 L3 间隔
-    const llm = stubLlm(() => ({ level: 'L3', suspend: false, revoke: false, reason: '等了够久了' }));
+    env.clock.advance(5 * 60000);                       // 等够 L4 间隔
+    const llm = stubLlm(() => ({ level: 'L4', suspend: false, revoke: false, reason: '等了够久了' }));
     const snap = await env.esc.escalateWithLlm({ llm, state: 'lying_bed', confidence: 0.9, waitedMin: 5 });
-    equal(snap.level, 'L3', '直接到 L3');
+    equal(snap.level, 'L4', '直接到 L4');
     const shuffles = env.bus.list({ action: 'shuffle_desktop' });
     equal(shuffles.length, 1, 'shuffle 真执行了');
-    equal(env.esc.getState().level, 'L3', '级别 L3');
+    equal(env.esc.getState().level, 'L4', '级别 L4');
   } finally { env.cleanup(); }
 });
 
-suite.test('闸门：L4 未授权 → 模型说 L4 也被封顶，维持原级', async () => {
+suite.test('闸门：L5 未授权 → 模型说 L5 也被封顶，维持原级', async () => {
   const env = makeEnv(false);   // authorizeL4 = false
   try {
     env.esc.start();
     env.clock.clearAll();
     env.clock.advance(5 * 60000);
-    const llm = stubLlm(() => ({ level: 'L4', suspend: false, revoke: false, reason: '隔离游戏文件' }));
+    const llm = stubLlm(() => ({ level: 'L5', suspend: false, revoke: false, reason: '隔离游戏文件' }));
     const snap = await env.esc.escalateWithLlm({ llm, state: 'lying_bed', confidence: 0.9, waitedMin: 5 });
     equal(snap.level, 'L0', '维持原级 L0');
     equal(snap.status, STATUS.CAPPED, 'CAP 状态（当天/授权封顶）');
     const q = env.bus.list({ action: 'quarantine_files' });
-    equal(q.length, 0, 'L4 没执行');
+    equal(q.length, 0, 'L5 没执行');
   } finally { env.cleanup(); }
 });
 
-suite.test('闸门：L4 已授权且间隔够 → 真隔离', async () => {
+suite.test('闸门：L5 已授权且间隔够 → 真隔离', async () => {
   const env = makeEnv(true);    // authorizeL4 = true
   try {
     env.esc.start();
     env.clock.clearAll();
     env.clock.advance(5 * 60000);
-    const llm = stubLlm(() => ({ level: 'L4', suspend: false, revoke: false, reason: '多次无效，隔离' }));
+    const llm = stubLlm(() => ({ level: 'L5', suspend: false, revoke: false, reason: '多次无效，隔离' }));
     const snap = await env.esc.escalateWithLlm({ llm, state: 'lying_bed', confidence: 0.9, waitedMin: 5 });
-    equal(snap.level, 'L4', '到 L4');
+    equal(snap.level, 'L5', '到 L5');
     const q = env.bus.list({ action: 'quarantine_files' });
-    equal(q.length, 1, 'L4 真执行');
+    equal(q.length, 1, 'L5 真执行');
     equal(fs.existsSync(path.join(env.root, '游戏截图.png')), false, '原位已空');
   } finally { env.cleanup(); }
 });
 
-suite.test('闸门：模型不能自选 action（L4 只能 quarantine_files）', async () => {
+suite.test('闸门：模型不能自选 action（L5 只能 quarantine_files）', async () => {
   const env = makeEnv(true);
   try {
     env.esc.start();
     env.clock.clearAll();
     env.clock.advance(5 * 60000);
-    const llm = stubLlm(() => ({ level: 'L4', suspend: false, revoke: false, reason: 'x', action: 'delete_files' }));
+    const llm = stubLlm(() => ({ level: 'L5', suspend: false, revoke: false, reason: 'x', action: 'delete_files' }));
     const snap = await env.esc.escalateWithLlm({ llm, state: 'lying_bed', confidence: 0.9, waitedMin: 5 });
-    equal(snap.level, 'L4', 'L4');
+    equal(snap.level, 'L5', 'L5');
     const q = env.bus.list({ action: 'quarantine_files' });
     equal(q.length, 1, 'action 仍是 quarantine_files，模型塞的 action 被忽略');
     const bad = env.bus.list({ action: 'delete_files' });

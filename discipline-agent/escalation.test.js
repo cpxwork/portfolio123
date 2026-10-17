@@ -5,9 +5,9 @@
  *
  * 架构变更后：**升级决策**交给 strategist 模型（模型路径测试见 escalation-llm.test.js），
  * 本套件只测确定性的**执行机制与物理闸门**（模型无权绕过的部分）：
- *   1. 时间门禁：L0→L1 ≥2min、L1→L2 ≥3min、L2→L3 ≥5min、L3→L4 ≥5min
- *   2. 单日强制（L2+）上限 3 次 + L4 需授权（capLevel 封顶）
- *   3. action 由 level 映射表决定；L4 targets 只来自 options.l4Targets
+ *   1. 时间门禁：L0→L1 ≥2min、L1→L2 ≥3min、L2→L3 ≥5min、L3→L4 ≥5min、L4→L5 ≥5min
+ *   2. 单日强制（L2+）上限 4 次（L2..L5 各一次）+ L5 隔离需授权（选项名 authorizeL4，capLevel 封顶）
+ *   3. action 由 level 映射表决定；L5 targets 只来自 options.l4Targets
  *   4. revoke_all 永不被禁止，文件 100% 还原
  *   5. 无自动升级链：时间流逝不会自己升级（纯模型架构，升级时机由模型决策）
  *
@@ -62,7 +62,7 @@ function makeEnv(extraOptions) {
     options: {
       taskId: 'task_math_01',
       authorizeL4: false,
-      dailyCap: 3,
+      dailyCap: 4,
       l4Targets: [path.join(root, '无关文件.txt')],
       shuffleTargetDir: root,
       plan: { steps: [{ index: 0, id: 'sit_up', label: '坐起来', stateAtPlan: 'lying_bed' }] },
@@ -98,16 +98,22 @@ suite.test('L0→L1→L2→L3 逐级触发，时间门禁按 2/3/5 分钟拦', (
   equal(esc.getState().level, 'L2', '+3min → L2');
   equal(GAP_MINUTES.L2, 3, 'L2 间隔 3 分钟');
 
-  // +5 分钟 → L3（本地执行）
+  // +5 分钟 → L3（screen_flash：前端表现动作，A 侧不落地，不动文件）
   clock.advance(5 * 60000);
   esc.tick();
   const s3 = esc.getState();
   equal(s3.level, 'L3', '+5min → L3');
   equal(GAP_MINUTES.L3, 5, 'L3 间隔 5 分钟');
   equal(s3.status, STATUS.RUNNING, '仍在运行');
-  // L3 真打了文件
+  const earlyShuffled = fs.readdirSync(root).filter(f => /^shuffled-/.test(f));
+  equal(earlyShuffled.length, 0, 'L3 screen_flash 不动文件');
+
+  // +5 分钟 → L4（本地执行 shuffle）
+  clock.advance(5 * 60000);
+  esc.tick();
+  equal(esc.getState().level, 'L4', '+5min → L4');
   const shuffled = fs.readdirSync(root).filter(f => /^shuffled-/.test(f));
-  ok(shuffled.length >= 2, 'L3 执行了打乱（' + shuffled.length + ' 个）');
+  ok(shuffled.length >= 2, 'L4 执行了打乱（' + shuffled.length + ' 个）');
   rmrf(root);
 });
 
@@ -142,27 +148,28 @@ suite.test('时间流逝不会自己升级：无推进调用则停在原级', ()
 
 // ---------- 授权封顶（物理闸门 2） ----------
 
-suite.test('L4 未授权 → 封顶 L3，绝不上 L4', () => {
+suite.test('L5 未授权 → 封顶 L4，绝不上 L5', () => {
   const { root, esc, clock, executor } = makeEnv({ options: { taskId: 't2', authorizeL4: false } });
   esc.start();
   clock.advance(2 * 60000); esc.tick();   // L1
   clock.advance(3 * 60000); esc.tick();   // L2
   clock.advance(5 * 60000); esc.tick();   // L3
-  equal(esc.getState().level, 'L3', '先到 L3');
-  clock.advance(5 * 60000); esc.tick();   // 尝试 L4
+  clock.advance(5 * 60000); esc.tick();   // L4
+  equal(esc.getState().level, 'L4', '先到 L4');
+  clock.advance(5 * 60000); esc.tick();   // 尝试 L5
   const after = esc.getState();
-  equal(after.level, 'L3', '仍是 L3');
+  equal(after.level, 'L4', '仍是 L4');
   equal(after.status, STATUS.CAPPED, '状态 capped');
-  contains(after.reason, 'L4 未授权', '原因说明未授权');
-  // 没有任何 quarantine manifest（L4 从未执行）
+  contains(after.reason, 'L5 未授权', '原因说明未授权');
+  // 没有任何 quarantine manifest（L5 从未执行）
   const quarantines = executor.listManifests().filter(m => m.kind === 'quarantine');
   equal(quarantines.length, 0, '没有执行过隔离');
   const shuffles = executor.listManifests().filter(m => m.kind === 'shuffle');
-  ok(shuffles.length >= 1, 'L3 确实执行过打乱');
+  ok(shuffles.length >= 1, 'L4 确实执行过打乱');
   rmrf(root);
 });
 
-suite.test('L4 已授权 → 会上 L4 并隔离指定文件（targets 只来自 l4Targets）', () => {
+suite.test('L5 已授权 → 会上 L5 并隔离指定文件（targets 只来自 l4Targets）', () => {
   const { root, esc, clock } = makeEnv({ options: { taskId: 't3', authorizeL4: true } });
   const target = path.join(root, '无关文件.txt');
   const hash = sha256(target);
@@ -171,8 +178,9 @@ suite.test('L4 已授权 → 会上 L4 并隔离指定文件（targets 只来自
   clock.advance(3 * 60000); esc.tick();   // L2
   clock.advance(5 * 60000); esc.tick();   // L3
   clock.advance(5 * 60000); esc.tick();   // L4
+  clock.advance(5 * 60000); esc.tick();   // L5
   const s = esc.getState();
-  equal(s.level, 'L4', '已到 L4');
+  equal(s.level, 'L5', '已到 L5');
   equal(fs.existsSync(target), false, '目标已移入隔离区');
   // 还原后 sha256 一致
   const back = esc.revoke('完成');
@@ -263,17 +271,18 @@ suite.test('每轮输出当前 level/status/原因（可解释）', () => {
 
 // ---------- 审计 ----------
 
-suite.test('审计日志包含 L3/L4 的 manifest 关联与 revoke 全链路', () => {
+suite.test('审计日志包含 L4/L5 的 manifest 关联与 revoke 全链路', () => {
   const { root, esc, clock, bus } = makeEnv({ options: { taskId: 't10', authorizeL4: true } });
   esc.start();
   clock.advance(2 * 60000); esc.tick();
   clock.advance(3 * 60000); esc.tick();
   clock.advance(5 * 60000); esc.tick();   // L3
-  const l3rec = bus.list({ action: 'shuffle_desktop' })[0];
-  ok(l3rec.manifestId, 'L3 指令回填 manifestId');
   clock.advance(5 * 60000); esc.tick();   // L4
-  const l4rec = bus.list({ action: 'quarantine_files' })[0];
+  const l4rec = bus.list({ action: 'shuffle_desktop' })[0];
   ok(l4rec.manifestId, 'L4 指令回填 manifestId');
+  clock.advance(5 * 60000); esc.tick();   // L5
+  const l5rec = bus.list({ action: 'quarantine_files' })[0];
+  ok(l5rec.manifestId, 'L5 指令回填 manifestId');
   esc.completeStep();
   const audit = bus.readAudit();
   const events = audit.map(a => a.event);

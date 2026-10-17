@@ -43,8 +43,9 @@ public class GoldenTests
         Assert.True(exit == 0, $"{file}/{name}: 内核非零退出（崩溃） stderr={stderr}");
         using var doc = JsonDocument.Parse(stdout);
         var root = doc.RootElement;
-        Assert.True(root.GetProperty("ok").GetBoolean(),
-            $"{file}/{name}: 内核拒绝 {root.GetProperty("error").GetString()}");
+        Assert.True(root.ValueKind == JsonValueKind.Object &&
+                    root.TryGetProperty("ok", out var okEl) && okEl.GetBoolean(),
+            $"{file}/{name}: 响应异常 stdout={stdout[..Math.Min(stdout.Length, 400)]} stderr={stderr[..Math.Min(stderr.Length, 200)]}");
 
         var data = root.GetProperty("data");
         if (file == "optimize") AssertOptimize(name, expect, data);
@@ -102,7 +103,18 @@ public class GoldenTests
                 for (var i = 0; i < ev.Length; i++) DeepAssert(ev[i], av[i], $"{path}[{i}]");
                 break;
             default:
-                Assert.Equal(expect.GetRawText(), actual.GetRawText(), ignoreCase: false, ignoreLineEndingDifferences: true, ignoreWhiteSpaceDifferences: false, ignoreAllWhiteSpace: false);
+                // 语义比较（不能比 GetRawText：内核 stdout 用 \uXXXX 转义，金样文件是原文中文）
+                switch (expect.ValueKind)
+                {
+                    case JsonValueKind.String:
+                        Assert.True(actual.ValueKind == JsonValueKind.String, path + " 期望字符串，实际 " + actual.ValueKind);
+                        Assert.Equal(expect.GetString(), actual.GetString());
+                        break;
+                    default:
+                        Assert.True(expect.ValueKind == actual.ValueKind,
+                            $"{path}: 期望 {expect.ValueKind} 实际 {actual.ValueKind}");
+                        break;
+                }
                 break;
         }
     }

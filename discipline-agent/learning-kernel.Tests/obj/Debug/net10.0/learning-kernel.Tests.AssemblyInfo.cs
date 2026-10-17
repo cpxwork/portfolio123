@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("learning-kernel.Tests")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+32a4ff7e9e6b05d11c863ff9dad6dd8779bd1690")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+16d6174a14b7cfd1038b106f0a36f2fdec53d5b1")]
 [assembly: System.Reflection.AssemblyProductAttribute("learning-kernel.Tests")]
 [assembly: System.Reflection.AssemblyTitleAttribute("learning-kernel.Tests")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
