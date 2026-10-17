@@ -3,7 +3,7 @@ const http = require('node:http');
 const {createHandler, LIMIT} = require('./agent.cjs');
 
 function startServer({port = 8878, env = {}, handler = createHandler(), options = {}} = {}) {
-  const configuration = {MODEL_API_KEY: env.MODEL_API_KEY, MODEL_NAME: env.MODEL_NAME, MODEL_API_URL: env.MODEL_API_URL};
+  const configuration = {MODEL_PROVIDER: env.MODEL_PROVIDER, MODEL_API_KEY: env.MODEL_API_KEY, MODEL_NAME: env.MODEL_NAME, MODEL_API_URL: env.MODEL_API_URL, MODEL_TOOLS: env.MODEL_TOOLS, MODEL_JSON_MODE: env.MODEL_JSON_MODE, MODEL_BUDGET_CNY: env.MODEL_BUDGET_CNY, MODEL_MAX_TURNS: env.MODEL_MAX_TURNS};
   const server = http.createServer(async (req, res) => {
     const host = req.headers.host || '';
     const localPort = server.address()?.port;

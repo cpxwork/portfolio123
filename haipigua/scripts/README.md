@@ -10,7 +10,7 @@ powershell -ExecutionPolicy Bypass -File .\server\start-local.ps1
 node preview.cjs
 ```
 
-第一个终端会隐藏输入 API Key，默认明确选择免费的 `glm-4-flash-250414`。2026-10-17 本机联调时4.7返回1305（模型访问过大）；可在启动命令末尾加 `-ModelName glm-4.7-flash` 手动选择它，服务不会自动切换。密钥留在服务进程内存，评测脚本无需密钥。
+第一个终端会隐藏输入 API Key。2026-10-17 起启动器默认明确选择 AI Ping 与 `GLM-4.7-Flash`；也可用 `-Provider zhipu -ModelName glm-4-flash-250414` 回到智谱免费型号。AI Ping 会按 token 计费，先用 `-BudgetCny` 设置本进程估算停止线，并在平台给 Key 设置固定额度。服务只允许 `server/providers.cjs` 列出的型号，不会自动切换。密钥留在服务进程内存，评测脚本无需密钥。
 
 保持上述终端开启。在第三个终端运行评测，并暂停浏览器里的模型请求，避免单并发服务互相占用。健康检查已配置不等于真实请求一定成功。
 
@@ -52,8 +52,16 @@ node scripts/evaluate-conversations.cjs
 
 `plan` 的 duration/energy/level/goal 只约束本轮建议，不改长期偏好；新消息保存独立 `note.advice` 快照，后续建议不会覆盖旧消息。旧建议进入模型上下文前仅取有限文字白名单，不带资源链接、媒体或额外属性。任一模型内容缺失或不合格，原子应用失败，不用本地模板补齐。
 
-每条请求最多等待110秒，串行执行；服务内所有角色、覆盖复核和至多一次结构修复共享4次调用、95秒总预算。输出包含 `name/success/checks/error/calls/clarification`；完整合成请求结果和最终状态写入被忽略的 `.local/conversation-evaluation.json`。检查失败或请求异常时 `success:false`，脚本最终退出码为 `1`；五条全部通过才为 `0`。这不是离线测试命令，会使用本机服务配置的真实免费模型。
+每条请求最多等待110秒，串行执行；服务内所有角色、覆盖复核和至多一次结构修复共享4次调用、95秒总预算。输出包含 `name/success/checks/error/calls/clarification`；完整合成请求结果和最终状态写入被忽略的 `.local/conversation-evaluation.json`。检查失败或请求异常时 `success:false`，脚本最终退出码为 `1`；五条全部通过才为 `0`。这不是离线测试命令，会使用本机服务配置的真实模型。
 
-2026-10-17原来失败的前三种说法连续复跑通过。新增混合场景起初遗漏忙碌事实；加入模型覆盖复核后修复。加强后的假设忙碌复核又出现 `MODEL_FORMAT`；将该复核明确约束为严格 JSON、使用 JSON mode 且不带 tools 后，最新五种固定样例5/5通过。当前主路由实际记录也采用 JSON 输出；可选 tools 配置不能证明原生函数调用已经发生。当前版本另通过基础四轮及一次浏览器求职建议验证：2次真实模型调用生成项目卡建议，未新增预约，原有行动约定仍为1项。失败历史保留，详见 `../LIVE_VALIDATION.md`。固定样例通过不能推算其他表达的准确率或长期稳定性。
+2026-10-17原来失败的前三种说法连续复跑通过。新增混合场景起初遗漏忙碌事实；加入模型覆盖复核后修复。加强后的假设忙碌复核又出现 `MODEL_FORMAT`；将该复核明确约束为严格 JSON、使用 JSON mode 且不带 tools 后，最新五种固定样例5/5通过。当前主路由实际记录也采用 JSON 输出；可选 tools 配置不能证明原生函数调用已经发生。当前版本另通过基础四轮及一次浏览器求职建议验证：2次真实模型调用生成项目卡建议，未新增预约，原有行动约定仍为1项。失败历史保留，详见 `../LIVE_VALIDATION.md`。固定样例通过不能推算其他表达的准确率或长期稳定性。以上数字是接入 AI Ping 之前的智谱基线；AI Ping 账户需重新跑并单独记录型号与费用。
 
-离线回归使用 `node --test --test-isolation=none tests/*.test.cjs`，当前85项通过（前端52：本地27、模型桥11、客户端11、消息渲染3；本机服务33）。这组测试使用 mock/本机 HTTP，不调用智谱；它证明状态与边界检查，不替代真实模型评测。
+## Review 真实样例
+
+```powershell
+node scripts/evaluate-review.cjs
+```
+
+使用合成兴趣、任务和原话，经本机 `/api/agent` 串行调用真实模型，检查五件事：未预约练习是否保存 review 并同轮交接；只有15分钟没有内容是否追问且不伪造完成；表单“轻松”加文字“排线难”是否两条都保留；两个相近兴趣是否只问一次且不误绑；明确没作品时是否不评分。结果写入被忽略的 `.local/review-evaluation.json`，标准输出含 `case/success/checks/modelCalls/provider/model/estimatedCostCny/error`。任一检查或请求失败退出码为 `1`。真实模型输出有随机性，失败原样保留，不用 mock 或本地模板补成通过。
+
+离线回归使用 `node --test --test-isolation=none tests/*.test.cjs`，当前106项通过。这组测试使用 mock/本机 HTTP，不调用任何真实平台；它证明状态与边界检查，不替代真实模型评测。

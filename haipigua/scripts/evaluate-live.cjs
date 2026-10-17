@@ -15,7 +15,7 @@ function memoryApp(){
 }
 const report={synthetic:true,startedAt:new Date().toISOString(),endpoint:ENDPOINT,timeoutMs:TIMEOUT_MS,selection:routeOnly?'route':'all',cases:[]};
 function persist(){fs.mkdirSync(path.dirname(OUTPUT),{recursive:true});fs.writeFileSync(OUTPUT,JSON.stringify(report,null,2)+'\n','utf8');}
-function receipt(result){console.log(JSON.stringify({case:result.case,success:result.success,modelCalls:result.modelCalls,why:result.why}));report.cases.push(result);persist();}
+function receipt(result){console.log(JSON.stringify({case:result.case,success:result.success,modelCalls:result.modelCalls,provider:result.provider,model:result.model,estimatedCostCny:result.estimatedCostCny,why:result.why}));report.cases.push(result);persist();}
 async function runCase(name,app,text,inspect,focusTaskId){
   const result={case:name,input:text,success:false,modelCalls:0,why:'',checks:{},request:null,response:null};
   const started=Date.now();let httpStatus=null;
@@ -28,6 +28,9 @@ async function runCase(name,app,text,inspect,focusTaskId){
         httpStatus=response.status;const raw=await response.text();
         try{result.response=JSON.parse(raw);}catch{throw Error('HTTP '+httpStatus+' returned invalid JSON');}
         result.modelCalls=Array.isArray(result.response.trace)?result.response.trace.filter(t=>t.kind==='model').length:0;
+        result.provider=result.response.usage?.provider;
+        result.model=result.response.usage?.model;
+        result.estimatedCostCny=result.response.usage?.estimatedCostCny;
         if(!response.ok)throw Error('HTTP '+httpStatus+' '+String(result.response.error?.code||'REQUEST_FAILED'));
         return result.response;
       }finally{clearTimeout(timer);}

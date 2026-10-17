@@ -43,8 +43,26 @@
       if (!f || !str(f.id, 100) || feedbackIds.has(f.id) || !tasks.has(f.taskId) || tasks.get(f.taskId).ideaId !== f.ideaId || !['done', 'partial', 'skipped'].includes(f.completion) || !Number.isFinite(Number(f.minutes)) || +f.minutes < 0 || +f.minutes > 480 || !timestamp(f.createdAt)) return false;
       feedbackIds.add(f.id);
     }
+    if (data.reviews !== undefined) {
+      if (!Array.isArray(data.reviews) || data.reviews.length > 5000) return false;
+      const reviewIds = new Set(), reviewIdeas = new Set(data.ideas.map(i => i.id)), reviewTasks = new Map(data.tasks.map(t => [t.id, t]));
+      for (const r of data.reviews) {
+        if (!r || !str(r.id, 100) || reviewIds.has(r.id) || !reviewIdeas.has(r.ideaId) || !nonempty(r.response, 2000) || !nonempty(r.summary, 1200) || typeof r.hasArtifact !== 'boolean' || typeof r.needsEvidence !== 'boolean' || !str(r.question, 500) || !str(r.nextStep, 1000) || !timestamp(r.createdAt)) return false;
+        if (r.taskId !== null && r.taskId !== undefined && (!reviewTasks.has(r.taskId) || reviewTasks.get(r.taskId).ideaId !== r.ideaId)) return false;
+        if (r.minutes !== null && r.minutes !== undefined && (!Number.isInteger(r.minutes) || r.minutes < 0 || r.minutes > 480)) return false;
+        if (r.durationScale !== null && r.durationScale !== undefined && (!Number.isFinite(r.durationScale) || r.durationScale < 0.25 || r.durationScale > 1)) return false;
+        if (r.difficulty !== null && r.difficulty !== undefined && !['easier', 'same', 'slightly-harder'].includes(r.difficulty)) return false;
+        for (const key of ['progress', 'problems']) {
+          if (r[key] !== undefined && (!Array.isArray(r[key]) || r[key].length > 3 || r[key].some(p => !p || !nonempty(p.point, 300) || !nonempty(p.evidence, 400)))) return false;
+        }
+        if (r.missingEvidence !== undefined && (!Array.isArray(r.missingEvidence) || r.missingEvidence.length > 3 || r.missingEvidence.some(s => !nonempty(s, 500)))) return false;
+        reviewIds.add(r.id);
+      }
+    }
     if (data.notes && (!Array.isArray(data.notes) || data.notes.length > 2000 || data.notes.some(n => !n || !str(n.id, 100) || !str(n.text, 8000) || !str(n.reply, 16000) || !Array.isArray(n.agents) || n.agents.some(a => ![1, 2, 3, 4].includes(a))))) return false;
-    if (data.notes?.some(n => !strings(n.ideaIds) || !strings(n.taskIds) || !timestamp(n.createdAt))) return false;
+    if (data.notes?.some(n => !strings(n.ideaIds) || !strings(n.taskIds) || !strings(n.reviewIds) || !timestamp(n.createdAt))) return false;
+    if (data.notes?.some(n => n.reviewQuestion !== undefined && !str(n.reviewQuestion, 1000))) return false;
+    if (data.notes?.some(n => n.reviewIds?.some(id => !data.reviews?.some(r => r.id === id)))) return false;
     if (data.notes?.some(n => n.advice !== undefined && (!Array.isArray(n.advice) || n.advice.length > 12 || n.advice.some(a => !a || !ids.has(a.ideaId) || !['plan', 'exploration'].includes(a.kind) || !adviceValue(a.kind, a.value))))) return false;
     if (data.notes?.some(n => n.trace && (!Array.isArray(n.trace) || n.trace.length > 100 || n.trace.some(t => !t || typeof t !== 'object')) || n.understanding && (!facts(n.understanding.facts) || !facts(n.understanding.constraints) || !strings(n.understanding.unknowns, 500)))) return false;
     if (data.availability) {
@@ -54,9 +72,10 @@
     if (data.studio && (typeof data.studio !== 'object' || Array.isArray(data.studio) || data.studio.facts && (!Array.isArray(data.studio.facts) || data.studio.facts.length > 100 || data.studio.facts.some(f => !f || !str(f.id, 100) || !str(f.text, 300))))) return false;
     return true;
   }
-  function defaults() { return {version: 1, ideas: [], tasks: [], feedback: [], availability: {}, notes: [], chatContext: {}, createdAt: new Date().toISOString()}; }
+  function defaults() { return {version: 1, ideas: [], tasks: [], feedback: [], reviews: [], availability: {}, notes: [], chatContext: {}, createdAt: new Date().toISOString()}; }
   function normalize(state) {
     global.PocketFlow.normalize(state);
+    if (!Array.isArray(state.reviews)) state.reviews = [];
     for (const feedback of state.feedback) {
       if (!feedback.createdAt) feedback.createdAt = state.createdAt || new Date().toISOString();
       if (!feedback.media && feedback.attachment) feedback.media = {id: feedback.id, ...feedback.attachment, analysis: 'not-analyzed'};
@@ -117,9 +136,10 @@
       return {
         ideas, tasks,
         feedback: state.feedback.filter(f => ids.has(f.ideaId) && taskIds.has(f.taskId)).slice(-10).map(f => ({ideaId: f.ideaId, taskId: f.taskId, completion: f.completion, minutes: f.minutes, feeling: f.feeling, reason: trim(f.reason, 350), summary: trim(f.summary, 350), nextAdjustment: f.nextAdjustment ? {durationScale: Number(f.nextAdjustment.durationScale) || 1, difficulty: trim(f.nextAdjustment.difficulty, 30), advice: trim(f.nextAdjustment.advice, 350), nextStep: trim(f.nextAdjustment.nextStep, 300)} : null})),
+        reviews: (state.reviews || []).filter(r => ids.has(r.ideaId)).slice(-8).map(r => ({ideaId: r.ideaId, taskId: r.taskId || null, summary: trim(r.summary, 400), response: trim(r.response, 500), progress: (r.progress || []).slice(0, 3).map(p => ({point: trim(p.point, 200), evidence: trim(p.evidence, 300)})), problems: (r.problems || []).slice(0, 3).map(p => ({point: trim(p.point, 200), evidence: trim(p.evidence, 300)})), missingEvidence: (r.missingEvidence || []).slice(0, 3).map(s => trim(s, 300)), hasArtifact: r.hasArtifact === true, needsEvidence: r.needsEvidence === true, question: trim(r.question, 400), nextStep: trim(r.nextStep, 500), createdAt: trim(r.createdAt, 40)})),
         notes: state.notes.slice(-4).map(n => ({text: trim(n.text, 800), reply: trim(n.reply, 400)})),
         availability: Object.fromEntries(Object.entries(state.availability).filter(([day]) => day >= current().today).sort(([a], [b]) => a.localeCompare(b)).slice(0, 14).map(([day, slots]) => [day, slots.slice(0, 20).map(s => ({start: s.start, end: s.end, label: trim(s.label, 100)}))])),
-        chatContext: {lastIdeaId: ids.has(state.chatContext.lastIdeaId) ? state.chatContext.lastIdeaId : null, lastTaskId: taskIds.has(state.chatContext.lastTaskId) ? state.chatContext.lastTaskId : null, ...(state.chatContext.pending ? {pending: {kind: trim(state.chatContext.pending.kind, 30), field: trim(state.chatContext.pending.field, 30), question: trim(state.chatContext.pending.question, 300), ...(state.chatContext.pending.intent ? {intent: {kind: trim(state.chatContext.pending.intent.kind, 30), ideaId: trim(state.chatContext.pending.intent.ideaId, 100), taskId: trim(state.chatContext.pending.intent.taskId, 100), data: Object.fromEntries(['date', 'start', 'end', 'duration', 'replaceTaskId'].filter(k => state.chatContext.pending.intent.data?.[k] !== undefined).map(k => [k, state.chatContext.pending.intent.data[k]]))}} : {})}} : {})},
+        chatContext: {lastIdeaId: ids.has(state.chatContext.lastIdeaId) ? state.chatContext.lastIdeaId : null, lastTaskId: taskIds.has(state.chatContext.lastTaskId) ? state.chatContext.lastTaskId : null, ...(state.chatContext.pending ? {pending: {kind: trim(state.chatContext.pending.kind, 30), field: trim(state.chatContext.pending.field, 30), question: trim(state.chatContext.pending.question, 300), ...(ids.has(state.chatContext.pending.ideaId) ? {ideaId: state.chatContext.pending.ideaId} : {}), ...(state.chatContext.pending.intent ? {intent: {kind: trim(state.chatContext.pending.intent.kind, 30), ideaId: trim(state.chatContext.pending.intent.ideaId, 100), taskId: trim(state.chatContext.pending.intent.taskId, 100), data: Object.fromEntries(['date', 'start', 'end', 'duration', 'replaceTaskId'].filter(k => state.chatContext.pending.intent.data?.[k] !== undefined).map(k => [k, state.chatContext.pending.intent.data[k]]))}} : {})}} : {})},
         confirmedFacts: state.studio.facts.slice(-15).map(f => ({id: f.id, text: trim(f.text, 300), source: 'user-confirmed'})),
         studio: {preference: {duration: Number(state.studio.preference.duration) || 10, energy: state.studio.preference.energy, level: state.studio.preference.level}}
       };
@@ -127,11 +147,21 @@
     async function submitModel(raw, request, focusTaskId = null, options = {}) {
       const text = String(raw || '').trim(); if (!text) return null;
       if (text.length > 8000) throw Error('一次最多 8000 字，请分两次说。');
-      let expected = null;
+      let expected = null, expectedReview = null;
+      if (focusTaskId && options.expectedReview !== undefined) throw Error('一次只能提交一种反馈。');
       if (options.expectedFeedback !== undefined) {
         const value = options.expectedFeedback;
         if (!focusTaskId || !value || !['done', 'partial', 'skipped'].includes(value.completion) || !['right', 'hard', 'easy'].includes(value.feeling) || !Number.isInteger(Number(value.minutes)) || Number(value.minutes) < 0 || Number(value.minutes) > 480 || typeof value.reason !== 'string' || value.reason.length > 2000 || value.completion === 'skipped' && Number(value.minutes) !== 0) throw Error('反馈表单信息不完整，请检查后再发送。');
-        expected = {taskId: focusTaskId, completion: value.completion, minutes: Number(value.minutes), feeling: value.feeling, reason: value.reason.trim()};
+        const task = state.tasks.find(t => t.id === focusTaskId && t.status === 'accepted');
+        if (!task) throw Error('这次行动已经反馈过，请重新选择。');
+        expected = {taskId: focusTaskId, ideaId: task.ideaId, completion: value.completion, minutes: Number(value.minutes), feeling: value.feeling, reason: value.reason.trim()};
+      }
+      if (options.expectedReview !== undefined) {
+        const value = options.expectedReview;
+        const idea = state.ideas.find(i => i.id === value?.ideaId);
+        const minutes = value?.minutes === null || value?.minutes === undefined || value?.minutes === '' ? null : Number(value.minutes);
+        if (!idea || !value || typeof value.reason !== 'string' || value.reason.length > 2000 || !(minutes === null || Number.isInteger(minutes) && minutes >= 0 && minutes <= 480) || !(value.completion === null || value.completion === undefined || ['done', 'partial', 'skipped'].includes(value.completion)) || !(value.feeling === null || value.feeling === undefined || ['right', 'hard', 'easy'].includes(value.feeling)) || value.completion === 'skipped' && minutes !== null && minutes !== 0) throw Error('兴趣反馈信息不完整，请检查后再发送。');
+        expectedReview = {ideaId: idea.id, completion: value.completion ?? null, minutes, feeling: value.feeling ?? null, reason: value.reason.trim()};
       }
       const before = JSON.stringify(state), sentAt = current();
       const context = modelContext();
@@ -139,8 +169,10 @@
         const task = state.tasks.find(t => t.id === focusTaskId && t.status === 'accepted');
         if (!task) throw Error('这次行动已经反馈过，请重新选择。');
         context.chatContext = {lastIdeaId: task.ideaId, lastTaskId: task.id};
+      } else if (expectedReview) {
+        context.chatContext = {lastIdeaId: expectedReview.ideaId, lastTaskId: null};
       }
-      const response = await request({text, ...sentAt, requestId: uid(), mode: mode(), context, ...(expected ? {reportedFeedback: {...expected}} : {})});
+      const response = await request({text, ...sentAt, requestId: uid(), mode: mode(), context, ...(expected ? {reportedFeedback: {taskId: expected.taskId, completion: expected.completion, minutes: expected.minutes, feeling: expected.feeling, reason: expected.reason}} : {}), ...(expectedReview ? {reportedReview: {...expectedReview}} : {})});
       if (JSON.stringify(state) !== before) throw Error('等待期间记录发生了变化，这次回复尚未写入。请检查后重试。');
       if (response?.source !== 'model' || !response.analysis || !Array.isArray(response.trace) || !response.trace.some(t => t.kind === 'model' && ['ok', 'success'].includes(t.status))) throw Error('服务没有返回可验证的模型结果，记录尚未改动。');
       if (focusTaskId && response.analysis.intents.some(i => i.kind === 'feedback' && i.taskId !== focusTaskId)) throw Error('反馈关联的行动不一致，尚未写入。请再确认一次。');
@@ -148,6 +180,11 @@
       if (expected) {
         const feedbacks = response.analysis.intents.filter(i => i.kind === 'feedback' && i.data?.canApply !== false);
         if (feedbacks.length !== 1 || feedbacks.some(i => i.data.completion !== expected.completion || i.data.minutes !== expected.minutes || i.data.feeling !== expected.feeling || (i.data.reason ?? '') !== expected.reason)) throw Error('模型改动了你填写的完成情况、时长、感受或原因。这次反馈尚未保存，原表单仍在，请检查后重试。');
+        if (!response.content?.reviews?.[expected.ideaId]) throw Error('回回没有完成这次反馈分析，原表单仍在，记录尚未改动。');
+      }
+      if (expectedReview) {
+        const reviews = response.analysis.intents.filter(i => i.kind === 'review' && i.ideaId === expectedReview.ideaId && i.data?.canApply !== false);
+        if (reviews.length !== 1 || !response.content?.reviews?.[expectedReview.ideaId]) throw Error('回回没有完成这次兴趣反馈分析，原表单仍在，记录尚未改动。');
       }
       return submit(text, {...response, now: sentAt.now}, expected);
     }
