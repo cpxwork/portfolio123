@@ -70,7 +70,7 @@ test('modelContext uses nested field whitelists, omits media and credentials, an
   app.state.chatContext={lastIdeaId:task.ideaId,lastTaskId:task.id,apiKey:marker,pending:{kind:'schedule',question:'改到几点？',intent:{kind:'schedule',ideaId:task.ideaId,data:{date:'2026-10-18',start:'15:00',duration:10,media:marker}},media:marker}};
   app.state.studio.preference.apiKey=marker;
   const context=app.modelContext();
-  assert.deepEqual(Object.keys(context).sort(),['ideas','tasks','feedback','notes','availability','chatContext','confirmedFacts','studio'].sort());
+  assert.deepEqual(Object.keys(context).sort(),['ideas','tasks','feedback','reviews','notes','availability','chatContext','confirmedFacts','studio'].sort());
   assert.equal(context.confirmedFacts[0].text,'我已经保研，希望找AI产品相关实习');assert.equal(context.confirmedFacts[0].source,'user-confirmed');
   assert.equal(context.ideas[0].id,task.ideaId);assert.equal(context.feedback[0].taskId,task.id);
   assert.equal(JSON.stringify(context).includes(marker),false,'nested preferences, adjustments, busy slots and pending context must all be whitelisted');
@@ -102,7 +102,7 @@ test('feedback form facts are sent explicitly and any model rewrite is rejected 
 test('a verified feedback form retains an explicitly empty reason and its model adjustment through save and undo',async()=>{
   const {app}=fixture(),task=appointment(app),before=app.exportData();
   const expected={completion:'partial',minutes:4,feeling:'hard',reason:''};
-  const note=await app.submitModel('表单反馈：只做了四分钟',async()=>({source:'model',trace:response().trace,analysis:{intents:[{kind:'feedback',taskId:task.id,data:{canApply:true,...expected}}]},content:{reflections:{[task.id]:reflection()}}}),task.id,{expectedFeedback:expected});
+  const note=await app.submitModel('表单反馈：只做了四分钟',async()=>({source:'model',trace:response().trace,analysis:{intents:[{kind:'feedback',taskId:task.id,data:{canApply:true,...expected}},{kind:'review',ideaId:task.ideaId,taskId:task.id,data:{canApply:true}}]},content:{reflections:{[task.id]:reflection()},reviews:{[task.ideaId]:{response:'先缩小一步。',summary:'只做了四分钟。',progress:[{point:'试了四分钟',evidence:'四分钟'}],problems:[{point:'觉得难',evidence:'难'}],missingEvidence:['没有看到作品'],hasArtifact:false,needsEvidence:false,question:'',nextStep:'只做一个动作。',durationScale:.5,difficulty:'easier',emotion:'thinking',advice:'缩小一步。',taskId:task.id,minutes:4}}}}),task.id,{expectedFeedback:expected});
   assert.equal(app.state.feedback[0].reason,'');assert.equal(note.beforeAfter.actual.reason,'');
   assert.equal(app.state.feedback[0].nextAdjustment.durationScale,.5);
   assert.equal(app.undo(note.id),true);assert.equal(app.state.feedback.length,0);assert.equal(app.state.tasks[0].status,'accepted');

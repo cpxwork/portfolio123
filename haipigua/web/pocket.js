@@ -13,7 +13,7 @@
   // is never reparsed with local templates under a misleading “model” label.
   function validateAnalysis(raw,state){
     if(!object(raw)||!Array.isArray(raw.intents)||raw.intents.length>12)throw Error('模型意图格式不完整，记录尚未改动。');
-    const kinds=['idea','plan','preference','schedule','busy','feedback','explore','note'],newKeys=new Set(),feedbackTasks=new Set();
+    const kinds=['idea','plan','preference','schedule','busy','feedback','review','explore','note'],newKeys=new Set(),feedbackTasks=new Set();
     const intents=raw.intents.map(i=>{
       if(!object(i)||!kinds.includes(i.kind)||!object(i.data)||(i.agents!==undefined&&!Array.isArray(i.agents)))throw Error('模型返回了不支持的操作，记录尚未改动。');
       const out={kind:i.kind,agents:(i.agents||[]).filter(a=>/^Agent [1-4]$/.test(a)),data:{}};
@@ -26,6 +26,8 @@
       else if(out.newIdeaKey&&!newKeys.has(out.newIdeaKey))throw Error('新兴趣应先记录再交接，记录尚未改动。');
       const data=i.data;
       if(i.kind==='plan'&&(out.taskId||['date','start','end','replaceTaskId'].some(k=>data[k]!==undefined)))throw Error('行动建议不能附带预约或改期操作，记录尚未改动。');
+      if(i.kind==='review'&&(out.newIdeaKey||['date','start','end','replaceTaskId','completion','feeling','reason'].some(k=>data[k]!==undefined)))throw Error('聊天反馈不能夹带预约或改写完成状态，记录尚未改动。');
+      if(i.kind==='review'&&!out.ideaId)throw Error('聊天反馈没有关联到具体兴趣，记录尚未改动。');
       for(const k of ['text','title','type','date','start','end','energy','level','goal','completion','feeling','reason','nextAvailable','resources','replaceTaskId','label','notice'])if(data[k]!==undefined){if(typeof data[k]!=='string')throw Error('模型字段类型不正确，记录尚未改动。');out.data[k]=data[k].slice(0,k==='text'?8000:k==='reason'?2000:500);}
       for(const [k,allowed] of Object.entries({type:['skill','creative','park'],energy:['low','medium','high'],level:['beginner','some','advanced'],completion:['done','partial','skipped'],feeling:['easy','right','hard']}))if(out.data[k]!==undefined&&!allowed.includes(out.data[k]))throw Error('模型选项不正确，记录尚未改动。');
       for(const k of ['duration','minutes'])if(data[k]!==undefined){if(!Number.isInteger(data[k])||data[k]<(k==='duration'?3:0)||data[k]>(k==='duration'?120:480))throw Error('模型时长不合法，记录尚未改动。');out.data[k]=data[k];}
@@ -44,6 +46,7 @@
         if(['schedule','busy'].includes(i.kind)&&(!out.data.date||!out.data.start))throw Error('模型未给出完整日期与时间，记录尚未改动。');
         if(i.kind==='busy'&&!out.data.end)throw Error('模型未给出忙碌时段的结束时间。');
         if(i.kind==='feedback'&&(!out.taskId||!out.data.completion||!state.tasks.some(t=>t.id===out.taskId&&t.status==='accepted')))throw Error('模型反馈目标无效或已经反馈，记录尚未改动。');
+        if(i.kind==='review'&&!out.ideaId)throw Error('模型没有说明这次反馈属于哪个兴趣，记录尚未改动。');
         if(i.kind==='feedback'){if(feedbackTasks.has(out.taskId))throw Error('同一轮不能重复写入同一行动的反馈。');feedbackTasks.add(out.taskId);}
       }
       return out;
@@ -77,24 +80,52 @@
     const strings=(items,label)=>{if(items===undefined)return [];if(!Array.isArray(items)||items.length>6)throw Error('模型'+label+'格式不完整。');return items.map(s=>sentence(s,label,600));};
     return {source:'model',title:sentence(value.title,'实验标题',150),assumptions:strings(value.assumptions,'待验证假设'),paths:value.paths.map(s=>({title:sentence(s?.title,'实验路径',150),description:sentence(s?.description,'实验说明')})),firstStep:{title:sentence(value.firstStep?.title,'第一步标题',150),description:sentence(value.firstStep?.description,'第一步说明')},successSignal:sentence(value.successSignal,'观察信号',1000),questions:strings(value.questions,'创意追问'),timeBudget:value.timeBudget,searchLinks:safeResources(value.searchLinks),feedbackApplied:value.feedbackApplied===true};
   }
+  function safeReview(value,key,state){
+    if(!object(value))throw Error('回回的反馈分析格式不完整，记录尚未改动。');
+    if(value.ideaId!==undefined&&value.ideaId!==key)throw Error('回回的反馈关联不一致，记录尚未改动。');
+    const points=(list,label)=>{if(list===undefined)return[];if(!Array.isArray(list)||list.length>3)throw Error('回回'+label+'格式不完整，记录尚未改动。');return list.map(item=>({point:sentence(item?.point,label,300),evidence:sentence(item?.evidence,'原文依据',400)}));};
+    const strings=(list,label)=>{if(list===undefined)return[];if(!Array.isArray(list)||list.length>3)throw Error('回回'+label+'格式不完整，记录尚未改动。');return list.map(item=>sentence(item,label,400));};
+    const response=sentence(value.response,'反馈回应',1200),summary=sentence(value.summary,'反馈摘要',800);
+    const needsEvidence=value.needsEvidence===true,hasArtifact=value.hasArtifact===true;
+    const question=typeof value.question==='string'?value.question.trim().slice(0,500):'';
+    const nextStep=typeof value.nextStep==='string'?value.nextStep.trim().slice(0,800):'';
+    if(needsEvidence&&!question)throw Error('回回需要追问时没有给出问题，记录尚未改动。');
+    if(!needsEvidence&&!nextStep)throw Error('回回没有给出下一步，记录尚未改动。');
+    if(!hasArtifact&&!strings(value.missingEvidence,'缺少的证据').length)throw Error('回回没有说明缺少什么证据，记录尚未改动。');
+    const durationScale=value.durationScale===null||value.durationScale===undefined?null:Number(value.durationScale);
+    if(durationScale!==null&&(!Number.isFinite(durationScale)||durationScale<.25||durationScale>1))throw Error('回回的时长调整无效，记录尚未改动。');
+    const difficulty=value.difficulty===null||value.difficulty===undefined?null:String(value.difficulty);
+    if(difficulty!==null&&!['easier','same','slightly-harder'].includes(difficulty))throw Error('回回的难度调整无效，记录尚未改动。');
+    if(value.taskId!==undefined&&value.taskId!==null){
+      const task=state.tasks.find(t=>t.id===value.taskId);
+      if(!task||task.ideaId!==key)throw Error('回回的反馈关联了无效行动，记录尚未改动。');
+    }
+    const minutes=value.minutes===null||value.minutes===undefined?null:Number(value.minutes);
+    if(minutes!==null&&(!Number.isInteger(minutes)||minutes<0||minutes>480))throw Error('回回的时长记录无效，记录尚未改动。');
+    return {source:'model',ideaId:key,taskId:value.taskId||null,response,summary,progress:points(value.progress,'进展'),problems:points(value.problems,'卡点'),missingEvidence:strings(value.missingEvidence,'缺少的证据'),hasArtifact,needsEvidence,question,nextStep,durationScale,difficulty,emotion:['happy','proud','sorry','thinking'].includes(value.emotion)?value.emotion:'thinking',advice:typeof value.advice==='string'?value.advice.trim().slice(0,800):nextStep,minutes,fromForm:value.fromForm===true};
+  }
   function validateContent(raw,state,analysis){
     if(raw!==undefined&&!object(raw))throw Error('模型协作结果格式不正确。');
-    const result={plans:Object.create(null),explorations:Object.create(null),reflections:Object.create(null)};
+    const result={plans:Object.create(null),explorations:Object.create(null),reflections:Object.create(null),reviews:Object.create(null)};
     const keys=new Set([...state.ideas.map(i=>i.id),...analysis.intents.filter(i=>i.kind==='idea').map(i=>i.newIdeaKey)]);
     for(const [kind,validate] of [['plans',safePlan],['explorations',safeExploration],['reflections',modelReflection]]){
       const values=raw?.[kind];if(values===undefined)continue;
       if(!object(values)||Object.keys(values).length>12)throw Error('模型协作结果格式不正确。');
       for(const [key,value] of Object.entries(values)){if(!safeKey(key)||(kind==='reflections'?!state.tasks.some(t=>t.id===key):!keys.has(key)))throw Error('模型协作引用无效，记录尚未改动。');result[kind][key]=validate(value);}
     }
+    if(raw?.reviews!==undefined){
+      if(!object(raw.reviews)||Object.keys(raw.reviews).length>12)throw Error('回回的反馈分析格式不正确。');
+      for(const [key,value] of Object.entries(raw.reviews)){if(!safeKey(key)||!state.ideas.some(i=>i.id===key))throw Error('回回的反馈引用了不存在的兴趣，记录尚未改动。');result.reviews[key]=safeReview(value,key,state);}
+    }
     return result;
   }
   function contentFor(options,kind,intent,idea){
     const item=options.content?.[kind]?.[intent.newIdeaKey]||options.content?.[kind]?.[idea?.id];
-    if(options.analysis&&!item)throw Error('模型'+({plans:'计划',explorations:'创意实验',reflections:'反馈'}[kind])+'缺失，记录尚未改动。请重试本次对话。');
+    if(options.analysis&&!item)throw Error('模型'+({plans:'计划',explorations:'创意实验',reflections:'反馈',reviews:'反馈分析'}[kind])+'缺失，记录尚未改动。请重试本次对话。');
     return item;
   }
-  const domain=state=>clone({ideas:state.ideas,tasks:state.tasks,feedback:state.feedback,availability:state.availability||{},chatContext:state.chatContext||{}});
-  function normalize(state){state.notes=Array.isArray(state.notes)?state.notes:[];state.chatContext=state.chatContext&&typeof state.chatContext==='object'?state.chatContext:{};state.availability=state.availability||{};if(!state.ideas.some(i=>i.id===state.chatContext.lastIdeaId))state.chatContext.lastIdeaId=null;if(!state.tasks.some(t=>t.id===state.chatContext.lastTaskId))state.chatContext.lastTaskId=null;return state;}
+  const domain=state=>clone({ideas:state.ideas,tasks:state.tasks,feedback:state.feedback,reviews:state.reviews||[],availability:state.availability||{},chatContext:state.chatContext||{}});
+  function normalize(state){state.notes=Array.isArray(state.notes)?state.notes:[];state.reviews=Array.isArray(state.reviews)?state.reviews:[];state.chatContext=state.chatContext&&typeof state.chatContext==='object'?state.chatContext:{};state.availability=state.availability||{};if(!state.ideas.some(i=>i.id===state.chatContext.lastIdeaId))state.chatContext.lastIdeaId=null;if(!state.tasks.some(t=>t.id===state.chatContext.lastTaskId))state.chatContext.lastTaskId=null;return state;}
   function latest(state,id){return [...state.feedback].reverse().find(f=>f.ideaId===id);}
   function collision(state,date,start,end,excludeId){return (state.availability[date]||[]).some(s=>start<minute(s.end)&&end>minute(s.start))||state.tasks.some(t=>t.id!==excludeId&&t.date===date&&t.status!=='skipped'&&start<minute(t.end)&&end>minute(t.start));}
   function learningTask(state,idea,data,existing,options){
@@ -141,9 +172,9 @@
     const analysis=options.analysis||(fresh?.intents.some(i=>i.kind==='idea'&&i.data.canApply!==false)?fresh:global.RambleRouter.analyze(input,routerContext));
     const currentIdea=state.ideas.find(i=>i.id===context.lastIdeaId);
     if(!options.analysis&&currentIdea?.type==='creative'&&/能不能|行不行|可行|怎么办|渠道|路径|方法|细节|先问|先找|要不/.test(text)&&analysis.intents.every(i=>i.kind==='note'))analysis.intents.push({kind:'explore',ideaId:currentIdea.id,agents:['Agent 3'],data:{canApply:true}});
-    const note={id:uid(),text,createdAt:options.now,reply:'',agents:[1],ideaIds:[],taskIds:[],links:[],source:options.analysis?'model':'local-demo',...(options.analysis?{trace:clone(options.trace||[]),...(analysis.understanding?{understanding:clone(analysis.understanding)}:{}),...(options.usage?{usage:clone(options.usage)}:{}),...(options.requestId?{requestId:String(options.requestId).slice(0,150)}:{})}:{})};
+    const note={id:uid(),text,createdAt:options.now,reply:'',agents:[1],ideaIds:[],taskIds:[],reviewIds:[],links:[],source:options.analysis?'model':'local-demo',...(options.analysis?{trace:clone(options.trace||[]),...(analysis.understanding?{understanding:clone(analysis.understanding)}:{}),...(options.usage?{usage:clone(options.usage)}:{}),...(options.requestId?{requestId:String(options.requestId).slice(0,150)}:{})}:{})};
     const replies=[],mapped=new Map(),handledPreferences=new Set();let clarification=analysis.clarification?.question||null,emotion='proud',mutated=false;
-    const keepPending=analysis.intents.some(i=>i.kind==='plan')&&!analysis.intents.some(i=>['schedule','busy','feedback'].includes(i.kind)&&i.data.canApply!==false);
+    const keepPending=analysis.intents.some(i=>i.kind==='plan')&&!analysis.intents.some(i=>['schedule','busy','feedback','review'].includes(i.kind)&&i.data.canApply!==false);
     function linkIdea(intent){return state.ideas.find(i=>i.id===(intent.ideaId||mapped.get(intent.newIdeaKey)||context.lastIdeaId));}
     function saveAdvice(idea,kind,value){
       if(!options.analysis)return;
@@ -206,21 +237,35 @@
       }else if(intent.kind==='feedback'){
         note.agents.push(4);let task=state.tasks.find(t=>t.id===intent.taskId&&t.status==='accepted');
         if(!task){clarification=clarification||'你说的是哪个小行动？告诉我它的名字就好。';context.pending={kind:'feedback',data,question:clarification};continue;}
-        const reported=data.completion||'partial',spent=reported==='skipped'?0:Math.max(0,Math.min(480,Number(data.minutes??(reported==='done'?task.duration:0))));
+        const reported=data.completion,spent=reported==='skipped'?0:Number(data.minutes);
+        if(!['done','partial','skipped'].includes(reported)||!Number.isInteger(spent)||spent<0||spent>480)throw Error('这次反馈缺少明确的完成情况或实际时长，记录尚未改动。请补充后再试。');
         const result=options.analysis?contentFor(options,'reflections',{...intent,newIdeaKey:task.id},{id:task.id}):global.SparkEngine.reflect({task,completion:reported,minutes:spent,feeling:data.feeling||'right',reason:data.reason||text,nextAvailable:data.nextAvailable});
         const feedback={id:uid(),ideaId:task.ideaId,taskId:task.id,taskTitle:task.title,createdAt:options.now,completion:reported,minutes:spent,feeling:data.feeling||'right',reason:data.reason||text,nextAvailable:data.nextAvailable||'',summary:result.summary,response:result.response,nextAdjustment:result.nextAdjustment,origin:'ramble'};
         feedback.source=options.analysis?'model':'local-demo';feedback.nextStep=result.nextAdjustment.nextStep||'';
         note.beforeAfter={before:{title:task.title,start:task.start,end:task.end,duration:task.duration},actual:{completion:reported,minutes:spent,feeling:data.feeling||'right',reason:data.reason||text},after:{advice:result.nextAdjustment.advice,duration:Math.max(3,Math.round(task.duration*result.nextAdjustment.durationScale)),difficulty:result.nextAdjustment.difficulty,nextStep:result.nextAdjustment.nextStep||''}};
         state.feedback.push(feedback);task.status=reported;context.lastIdeaId=task.ideaId;context.lastTaskId=task.id;context.pending=null;note.ideaIds.push(task.ideaId);note.taskIds.push(task.id);emotion=result.emotion;mutated=true;
         replies.push(result.response+' 下一次：'+result.nextAdjustment.advice);note.links.push({view:'feedback',label:'已留下成长反馈',taskId:task.id,ideaId:task.ideaId});
+      }else if(intent.kind==='review'){
+        const idea=linkIdea(intent);if(!idea)continue;
+        if(!options.analysis)throw Error('聊天反馈需要真实模型先分析，记录尚未改动。');
+        const value=contentFor(options,'reviews',intent,idea);
+        const item={...clone(value),id:uid(),ideaId:idea.id,noteId:note.id,createdAt:options.now,taskId:value.taskId||null};
+        state.reviews.push(item);note.reviewIds.push(item.id);note.agents.push(4);note.ideaIds.push(idea.id);context.lastIdeaId=idea.id;
+        if(item.taskId)note.taskIds.push(item.taskId);
+        mutated=true;
+        if(!item.taskId)replies.push(item.response+(item.summary&&!item.response.includes(item.summary)?'\n\n'+item.summary:''));
+        if(item.needsEvidence&&item.question){note.reviewQuestion=item.question;context.pending={kind:'review',ideaId:idea.id,question:item.question};emotion='thinking';}
+        else if(context.pending?.kind==='review')context.pending=null;
+        note.links.push({view:'feedback',label:'回回已分析这次经历',ideaId:idea.id,...(item.taskId?{taskId:item.taskId}:{})});
       }else if(intent.kind==='explore'){
         const idea=linkIdea(intent);if(!idea)continue;idea.exploration=options.analysis?contentFor(options,'explorations',intent,idea):global.SparkEngine.exploreIdea({idea:idea.text+'。补充：'+text,timeBudget:idea.preferences?.duration||10,resources:data.resources||'',feedback:latest(state,idea.id)});saveAdvice(idea,'exploration',idea.exploration);note.agents.push(3);note.ideaIds.push(idea.id);mutated=true;replies.push('继续想一想：'+String(idea.exploration.firstStep?.title||idea.exploration.firstStep));note.links.push({view:'lab',label:'探索路径已更新',ideaId:idea.id});
       }
     }
     if(analysis.clarification?.pending){context.pending=clone(analysis.clarification.pending);const intent=context.pending.intent;if(intent.newIdeaKey&&mapped.has(intent.newIdeaKey)){intent.ideaId=mapped.get(intent.newIdeaKey);delete intent.newIdeaKey;}}
+    const keepUnrelatedPending=analysis.intents.some(i=>i.kind==='review')&&context.pending&&context.pending.kind!=='review';
     if(clarification){note.clarification=clarification;replies.push(clarification);if(!context.pending)context.pending={kind:'note',question:clarification};emotion='thinking';}
-    else {if(!keepPending)context.pending=null;if(!replies.length)replies.push('这句碎碎念也收好了。你可以接着说想学什么、什么时候有空，或今天的小进展。');}
-    note.reply=replies.join('\n\n');note.agents=[...new Set(note.agents)].sort();note.ideaIds=[...new Set(note.ideaIds)];note.taskIds=[...new Set(note.taskIds)];note.emotion=emotion;note.changed=mutated;
+    else {if(!keepPending&&!note.reviewQuestion&&!keepUnrelatedPending)context.pending=null;if(!replies.length)replies.push('这句碎碎念也收好了。你可以接着说想学什么、什么时候有空，或今天的小进展。');}
+    note.reply=replies.join('\n\n');note.agents=[...new Set(note.agents)].sort();note.ideaIds=[...new Set(note.ideaIds)];note.taskIds=[...new Set(note.taskIds)];note.reviewIds=[...new Set(note.reviewIds)];note.emotion=emotion;note.changed=mutated;
     if(options.analysis){
       const after=domain(state),addTrace=(agent,tool,detail,status='success')=>note.trace.push({agent,kind:'tool',tool,action:detail,status,at:options.now,durationMs:0,source:'local-state'});
       if(JSON.stringify(before.ideas)!==JSON.stringify(after.ideas))addTrace('Agent 1','save_idea','已保存兴趣与本次模型计划');
@@ -228,6 +273,7 @@
       if(analysis.intents.some(i=>i.kind==='schedule'&&i.data.canApply))addTrace('Agent 2','check_availability','已实际校验日期、时长、精力与本地时间冲突',note.taskIds.length?'success':'needs_clarification');
       if(JSON.stringify(before.tasks)!==JSON.stringify(after.tasks))addTrace('Agent 2','save_task','已写入或更新本地行动');
       if(JSON.stringify(before.feedback)!==JSON.stringify(after.feedback))addTrace('Agent 4','save_feedback','已保存实际反馈与模型调整依据');
+      if(JSON.stringify(before.reviews)!==JSON.stringify(after.reviews))addTrace('Agent 4','save_review','已保存回回对本次经历的分析；没有改动旧任务');
     }
     state.notes.push(note);if(state.notes.length>2000)state.notes.splice(0,state.notes.length-2000);undoEntry={id:note.id,before,after:domain(state)};return note;
   }
@@ -240,7 +286,7 @@
     const working=clone(state),previousUndo=undoEntry;
     try{
       const note=applyTurn(text,working,{...options,analysis,content});if(!note)return null;
-      for(const key of ['ideas','tasks','feedback','availability','chatContext','notes'])state[key]=working[key];
+      for(const key of ['ideas','tasks','feedback','reviews','availability','chatContext','notes'])state[key]=working[key];
       return note;
     }catch(error){undoEntry=previousUndo;throw error;}
   }

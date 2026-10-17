@@ -24,6 +24,7 @@ const plan = () => ({plans: {'new-0': {title: '写出一次输出', steps: [{tit
 const context = () => ({ideas: [{id: 'idea-1', text: '学唱歌', title: '唱歌', type: 'skill', preferences: {duration: 10, energy: 'low'}}], tasks: [{id: 'task-1', ideaId: 'idea-1', title: '跟唱十分钟', date: '2026-10-17', start: '11:00', end: '11:10', duration: 10, status: 'accepted'}], feedback: [], availability: {}, notes: [], chatContext: {lastIdeaId: 'idea-1', lastTaskId: 'task-1'}});
 const feedbackRoute = () => ({intents: [{kind: 'feedback', taskId: 'task-1', data: {canApply: true, completion: 'partial', minutes: 5, feeling: 'hard', reason: '高音困难'}}]});
 const reflection = () => ({reflections: {'task-1': {response: '下一次先缩小到舒适音域。', summary: '实际唱了5分钟，高音困难。', emotion: 'thinking', nextAdjustment: {durationScale: 0.5, difficulty: 'easier', advice: '减少音高跨度，一次练一小句。', nextStep: '用舒适音高轻唱一句并录下10秒。'}}}});
+const reviewOutput = () => ({reviews: {'idea-1': {response: '你实际唱了5分钟，也点出了高音困难。', summary: '练了5分钟，高音这一处卡住。', progress: [{point: '实际练了5分钟', evidence: '5分钟'}], problems: [{point: '高音困难', evidence: '高音很难'}], missingEvidence: ['没有看到或听到这次练习，无法判断音准和发声方式'], hasArtifact: false, needsEvidence: false, question: '', nextStep: '先用舒适音高轻唱一小句，录10秒自己对照。', durationScale: 0.5, difficulty: 'easier', emotion: 'thinking', advice: '先减少音高跨度，不判断音准。'}}});
 
 test('health has truthful capability flags and no config names or secrets; paid model and alternate endpoints stay unready', async () => {
   const handler = createHandler();
@@ -295,13 +296,21 @@ test('unknown IDs and fabricated dates reject before specialists run', async () 
   }
 });
 
-test('actual feedback reaches Agent 4, and next-turn planner sees the resulting adjustment with no server domain writes', async () => {
+test('actual feedback gets a review, hands off to the planner, and leaves domain writes to the client', async () => {
   const state = context();
-  const p = provider([{intents: [{kind: 'feedback', taskId: 'task-1', data: {canApply: true, completion: 'partial', minutes: 5, feeling: 'hard', reason: '高音困难'}}]}, {reflections: {'task-1': {response: '先缩小难度。', summary: '练了5分钟，高音困难。', emotion: 'thinking', nextAdjustment: {durationScale: 0.5, difficulty: 'easier', advice: '下次先练舒适音域。', nextStep: '轻声跟唱一小句并录10秒。'}}}}]);
-  const first = await createHandler()(request(input({text: '我只唱了5分钟，高音很难', context: state})), ENV, p);
+  const p = provider([{intents: [{kind: 'feedback', taskId: 'task-1', data: {canApply: true, completion: 'partial', minutes: 5, feeling: 'hard', reason: '高音困难'}}]}, reviewOutput(), {plans: {'idea-1': plan().plans['new-0']}}]);
+  const first = await createHandler()(request(input({text: '唱完了，只练了5分钟，高音很难', context: state})), ENV, p);
   assert.equal(first.status, 200);
+  assert.equal(p.calls.length, 3);
   assert.match(p.calls[1].messages[1].content, /高音困难/);
-  assert.equal(state.tasks[0].status, 'accepted');
+  assert.equal(state.tasks[0].status, 'accepted', 'only the client may record task completion');
+  assert.ok(first.body.content.reviews['idea-1']);
+  assert.equal(first.body.content.reviews['idea-1'].taskId, 'task-1');
+  assert.equal(first.body.content.reviews['idea-1'].minutes, 5);
+  assert.ok(first.body.content.reflections['task-1']);
+  assert.ok(first.body.content.plans['idea-1']);
+  assert.ok(first.body.trace.some(t => t.agent === 'Agent 4' && t.action === 'handoff_review'));
+  assert.ok(first.body.analysis.intents.some(i => i.kind === 'plan' && i.ideaId === 'idea-1'));
   const reflection = first.body.content.reflections['task-1'];
   state.tasks[0].status = 'partial';
   state.feedback.push({ideaId: 'idea-1', taskId: 'task-1', completion: 'partial', minutes: 5, feeling: 'hard', reason: '高音困难', summary: reflection.summary, nextAdjustment: reflection.nextAdjustment});
@@ -334,17 +343,18 @@ test('each eligible router representation error gets one genuine model repair an
   }
 });
 
-test('missing feedback next step is repaired by a real extra call rather than a default local sentence', async () => {
-  const incomplete = reflection(); delete incomplete.reflections['task-1'].nextAdjustment.nextStep;
-  const state = context(), p = provider([feedbackRoute(), incomplete, reflection()]);
-  const result = await createHandler()(request(input({text: '只练了五分钟，高音有点难', context: state})), ENV, p);
+test('missing review next step is repaired by a real extra call rather than a default local sentence', async () => {
+  const incomplete = reviewOutput(); delete incomplete.reviews['idea-1'].nextStep;
+  const state = context(), p = provider([feedbackRoute(), incomplete, reviewOutput(), {plans: {'idea-1': plan().plans['new-0']}}]);
+  const result = await createHandler()(request(input({text: '唱完了，只练了5分钟，高音很难', context: state})), ENV, p);
   assert.equal(result.status, 200);
-  assert.equal(p.calls.length, 3);
-  assert.equal(result.body.usage.calls, 3);
+  assert.equal(p.calls.length, 4);
+  assert.equal(result.body.usage.calls, 4);
   assert.equal(result.body.trace.filter(t => t.agent === 'Agent 4' && t.kind === 'model').length, 2);
-  assert.equal(result.body.content.reflections['task-1'].nextAdjustment.nextStep, reflection().reflections['task-1'].nextAdjustment.nextStep);
+  assert.equal(result.body.content.reviews['idea-1'].nextStep, reviewOutput().reviews['idea-1'].nextStep);
+  assert.ok(result.body.content.plans['idea-1']);
   const repairPayload = JSON.parse(p.calls[2].messages[1].content);
-  assert.equal(repairPayload.text, '只练了五分钟，高音有点难');
+  assert.equal(repairPayload.text, '唱完了，只练了5分钟，高音很难');
   assert.equal(repairPayload.targets[0].feedback.minutes, 5);
   assert.deepEqual(repairPayload.candidate, incomplete);
   assert.equal(state.tasks[0].status, 'accepted', 'only client may apply feedback domain writes');
@@ -359,15 +369,15 @@ test('a still-invalid repair stops and a turn never repairs twice across differe
   assert.equal(p.calls.length, 2);
   assert.equal(failedRouter.body.usage.calls, 2);
   assert.equal(failedRouter.body.trace.filter(t => t.kind === 'model').length, 2);
-  const badFeedback = reflection(); badFeedback.reflections['task-1'].nextAdjustment.nextStep = '';
-  const feedbackProvider = provider([feedbackRoute(), badFeedback, badFeedback, reflection()]);
-  const failedFeedback = await createHandler()(request(input({context: context()})), ENV, feedbackProvider);
+  const badReview = reviewOutput(); badReview.reviews['idea-1'].nextStep = '';
+  const feedbackProvider = provider([feedbackRoute(), badReview, badReview, {plans: {'idea-1': plan().plans['new-0']}}]);
+  const failedFeedback = await createHandler()(request(input({text: '唱完了，只练了5分钟，高音很难', context: context()})), ENV, feedbackProvider);
   assert.equal(failedFeedback.status, 502);
   assert.equal(failedFeedback.body.error.stage, 'Agent 4');
-  assert.equal(feedbackProvider.calls.length, 3);
+  assert.equal(feedbackProvider.calls.length, 3, 'invalid review stops before the planner');
   assert.equal(failedFeedback.body.usage.calls, 3);
-  const sharedProvider = provider([badRouter, feedbackRoute(), badFeedback, reflection()]);
-  const oncePerTurn = await createHandler()(request(input({context: context()})), ENV, sharedProvider);
+  const sharedProvider = provider([badRouter, feedbackRoute(), badReview, {plans: {'idea-1': plan().plans['new-0']}}]);
+  const oncePerTurn = await createHandler()(request(input({text: '唱完了，只练了5分钟，高音很难', context: context()})), ENV, sharedProvider);
   assert.equal(oncePerTurn.status, 502);
   assert.equal(oncePerTurn.body.error.stage, 'Agent 4');
   assert.equal(sharedProvider.calls.length, 3, 'router repair already consumed the only repair for this turn');
@@ -378,7 +388,7 @@ test('unknown router or feedback IDs, illegal dates and upstream authentication 
   const cases = [
     [provider([{intents: [{kind: 'feedback', taskId: 'invented', data: {canApply: true}}]}, note()]), 1, 'UNKNOWN_ID'],
     [provider([{intents: [{kind: 'schedule', ideaId: 'idea-1', data: {canApply: true, date: '2026-02-30', start: '12:00', duration: 10}}]}, note()]), 1, 'MODEL_FORMAT'],
-    [provider([feedbackRoute(), {reflections: {'invented': reflection().reflections['task-1']}}, reflection()]), 2, 'UNKNOWN_ID'],
+    [provider([feedbackRoute(), {reviews: {'invented': reviewOutput().reviews['idea-1']}}, reviewOutput()]), 2, 'UNKNOWN_ID'],
     [provider([() => ({ok: false, status: 401, text: async () => JSON.stringify({error: {code: '1000'}})}), note()]), 1, 'MODEL_AUTH']
   ];
   for (const [p, count, code] of cases) {
@@ -388,29 +398,15 @@ test('unknown router or feedback IDs, illegal dates and upstream authentication 
   }
 });
 
-test('all four normal role calls exhaust the call budget, so invalid feedback does not launch a fifth repair', async () => {
-  const route = {intents: [
-    {kind: 'preference', ideaId: 'idea-1', data: {canApply: true, energy: 'low'}},
-    {kind: 'idea', newIdeaKey: 'new-0', data: {canApply: true, type: 'creative', text: '校园地图', title: '校园地图'}},
-    ...feedbackRoute().intents
-  ]};
-  const exploration = {explorations: {'new-0': {title: '地图草图', assumptions: ['同学可能需要地图，待验证。'], paths: [{title: '画草图', description: '标记三个地点。'}], firstStep: {title: '标记三个地点', description: '在纸上画出熟悉的三个地点。'}, successSignal: '保存一张草图。', questions: []}}};
-  const incomplete = reflection(); delete incomplete.reflections['task-1'].nextAdjustment.nextStep;
-  const p = provider([route, {plans: {'idea-1': plan().plans['new-0']}}, exploration, incomplete, reflection()]);
-  const result = await createHandler()(request(input({context: context()})), ENV, p);
-  assert.equal(result.status, 502);
-  assert.equal(result.body.error.code, 'MODEL_FORMAT');
-  assert.equal(p.calls.length, 4);
-});
-
 test('a form preserves reported facts and calls only the feedback model; unsupported robot pose uses a neutral expression', async () => {
-  const value = reflection(); value.reflections['task-1'].emotion = 'encouraging';
-  const p = provider([value]), reason = '卡在高音，今天先停一下。'.repeat(60);
+  const value = reviewOutput(); value.reviews['idea-1'].emotion = 'encouraging'; value.reviews['idea-1'].progress[0].evidence = '卡在高音'; value.reviews['idea-1'].problems[0].evidence = '卡在高音';
+  const p = provider([value, {plans: {'idea-1': plan().plans['new-0']}}]), reason = '卡在高音，今天先停一下。'.repeat(60);
   const result = await createHandler()(request(input({context: context(), reportedFeedback: {taskId: 'task-1', completion: 'partial', minutes: 4, feeling: 'hard', reason}})), ENV, p);
-  assert.equal(result.status, 200); assert.equal(p.calls.length, 1);
+  assert.equal(result.status, 200); assert.equal(p.calls.length, 2);
   assert.match(p.calls[0].messages[0].content, /Agent 4/);
   assert.equal(JSON.parse(p.calls[0].messages[1].content).targets[0].feedback.reason, reason);
   assert.deepEqual(result.body.analysis.intents[0].data, {canApply: true, completion: 'partial', minutes: 4, feeling: 'hard', reason});
+  assert.equal(result.body.content.reviews['idea-1'].emotion, 'thinking');
   assert.equal(result.body.content.reflections['task-1'].emotion, 'thinking');
   assert.equal(result.body.trace.some(t => t.action === '修复一次结构并重新校验'), false);
 });

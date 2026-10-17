@@ -19,3 +19,4 @@ dialog{width:min(580px,calc(100% - 30px));padding:32px;border:1px solid #9ca68e;
 @media(max-width:1120px) and (min-width:781px){.character-stage{min-height:290px;height:300px}.character{max-width:145px}}
 @media(max-width:780px){.character-stage{height:260px;min-height:260px;max-width:260px;width:100%;gap:3px}.character{max-width:123px;width:100%}.name-tag{margin-top:-11px}.character-pipi,.character-dida,.character-bobo,.character-huihui{left:auto;right:auto;top:auto}.companion-side{grid-template-columns:1fr 1.05fr}}
 @media(max-width:460px){.character-stage{height:212px;min-height:212px}.character{max-width:100px}.name-tag{margin-top:-9px;font-size:8px}.stage-caption{margin-top:7px}}
+.review-evidence{color:var(--muted);font-size:10px}.review-question{background:#fff7dd;border-left:3px solid #c8a34d;padding:8px 10px;border-radius:4px}
