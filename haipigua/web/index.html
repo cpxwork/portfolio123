@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#f7f3e9">
+  <meta name="description" content="嗨皮瓜，四个呆萌机器人，把碎碎念接成小行动。">
+  <title>嗨皮瓜 · 把喜欢，慢慢养大</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="studio.css">
+  <script defer src="engine.js"></script>
+  <script defer src="ramble.js"></script>
+  <script defer src="pocket.js"></script>
+  <script defer src="studio-core.js"></script>
+  <script defer src="model-client.js"></script>
+  <script defer src="studio.js"></script>
+</head>
+<body>
+  <a class="skip" href="#composer">跳到碎碎念输入框</a>
+  <div class="site-shell">
+    <header class="topbar">
+      <a class="brand" href="#chat" aria-label="嗨皮瓜，回到对话"><span class="brand-seed" aria-hidden="true">瓜</span>嗨皮瓜<span class="brand-note">把喜欢，慢慢养大</span></a>
+      <nav aria-label="主导航"><button data-view="chat" class="selected">小窝对话</button><button data-view="agenda">行动约定 <span id="task-count">0</span></button><button data-view="memory">记忆口袋</button></nav>
+      <button class="mode-switch" id="mode-button" aria-label="选择今天的陪伴模式"><span id="mode-dot"></span><span id="mode-label">温和陪伴</span> ⇄</button>
+    </header>
+    <main id="main">
+      <section id="chat-view" class="chat-layout">
+        <aside class="companion-side" aria-label="四个陪伴机器人">
+          <p class="eyebrow">FOUR LITTLE COMPANIONS</p>
+          <h1>想得很远，<br>先走<span class="underline">一小步。</span></h1>
+          <p class="intro">一时兴起也很好。<br>把乱七八糟的喜欢，交给我们。</p>
+          <div class="character-stage" id="character-stage">
+            <span class="stage-scribble scribble-one" aria-hidden="true">✧</span><span class="stage-scribble scribble-two" aria-hidden="true">↗</span>
+            <button class="character character-pipi active" data-character="1" aria-label="认识皮皮：灵感记录员"><span class="sprite pipi"></span><span class="name-tag">皮皮<span>接住想法</span></span></button>
+            <button class="character character-dida" data-character="2" aria-label="认识滴答：学习安排员"><span class="sprite dida"></span><span class="name-tag">滴答<span>留点时间</span></span></button>
+            <button class="character character-bobo" data-character="3" aria-label="认识啵啵：创意探索员"><span class="sprite bobo"></span><span class="name-tag">啵啵<span>试试脑洞</span></span></button>
+            <button class="character character-huihui" data-character="4" aria-label="认识回回：行动反馈员"><span class="sprite huihui"></span><span class="name-tag">回回<span>带回收获</span></span></button>
+          </div>
+          <div class="stage-caption" id="stage-caption" aria-live="polite">皮皮：我听着呢，想到哪儿就说到哪儿。</div>
+          <div class="relay-map" aria-label="接力流程">接住想法 <span>↗ 留出时间 ↘<br>↘ 探索创意 ↗</span> 带回收获 <b>↺</b></div>
+          <p class="local-label"><span id="connection-dot"></span><button class="connection-button" id="connection-button" data-action="model-connection">检测模型服务…</button><button data-action="capabilities" aria-label="查看当前功能说明">?</button></p>
+        </aside>
+        <div class="conversation-area">
+          <div class="conversation-heading"><div><span class="live-dot"></span>皮皮和朋友们<span class="heading-sub">你说一次，我们一起接住。</span></div><button class="text-button" data-action="bottom" aria-label="跳到最新对话">最新 ↓</button></div>
+          <div class="thread" id="thread" aria-label="小窝对话记录"></div>
+          <div class="composer-wrap" id="composer-anchor">
+            <div id="model-message" class="model-message" role="status" hidden></div>
+            <div class="suggestions" id="suggestions"><button data-sample="learning">想学一点</button><button data-sample="creative">有个大脑洞</button><button data-action="feedback">带回今天的收获</button></div>
+            <div class="reward-strip" id="reward-strip" hidden><button data-action="rewards" id="reward-points">✦ 0 成长值</button><span>每一点尝试，都值得被看见。<small>演示待核验 · 不抵现</small></span></div>
+            <form id="composer-form" class="composer-form">
+              <label for="composer" class="sr-only">告诉皮皮你的想法、空闲时间，或行动反馈</label>
+              <textarea id="composer" maxlength="8000" rows="3" placeholder="我想学跳舞，明天中午十二点试十分钟吧。还有，我想做一个给流浪小猫找家的小网站……"></textarea>
+              <div class="composer-tools"><button type="button" id="dictate" class="dictate" aria-pressed="false"><span aria-hidden="true">♩</span>说给皮皮听</button><span id="draft-count">0 / 8000</span><button type="submit" class="send" id="send-button">递给皮皮 <span aria-hidden="true">↗</span></button></div>
+            </form>
+            <p class="composer-hint" id="speech-status">不用先分类。模型模式会将本次文字和近期相关记录发送给智谱；密钥只留在本机服务。</p>
+          </div>
+        </div>
+      </section>
+      <section id="agenda-view" class="page-view" hidden></section>
+      <section id="memory-view" class="page-view" hidden></section>
+    </main>
+    <footer>热情可以只有三分钟，喜欢可以留很久。<span>嗨皮瓜 · HAPPY GROW</span></footer>
+  </div>
+  <dialog id="dialog" aria-labelledby="dialog-title"><button class="dialog-close" data-action="close" aria-label="关闭弹窗">×</button><div id="dialog-body"></div></dialog>
+  <div id="toasts" class="toasts" role="status" aria-live="polite"></div>
+  <div id="bugs-layer" aria-hidden="true"></div>
+  <div id="bug-controls" class="bug-controls" hidden><strong>滴答的虫虫提醒</strong><span>还没收到反馈。现在发生了什么？</span><button data-action="clear-bugs">一键清除</button><button data-action="feedback">告诉回回</button><button data-action="gentle">换回温和</button></div>
+  <input type="file" id="import-file" accept="application/json,.json" hidden>
+  <noscript>嗨皮瓜需要启用 JavaScript 才能记录想法。你的记录保存在自己的浏览器。</noscript>
+</body>
+</html>
