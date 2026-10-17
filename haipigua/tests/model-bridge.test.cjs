@@ -81,3 +81,67 @@ test('model-created records retain full 8000-character originals and support che
   assert.equal(win.PocketFlow.canUndo(note.id,state),true);assert.equal(win.PocketFlow.undo(state,note.id),true);
   assert.equal(state.ideas.length,0);assert.equal(state.notes[0].text,original);assert.equal(state.notes[0].undone,true);
 });
+
+test('advice-only plan replaces the saved model suggestion while preserving appointments, preferences and pending rescheduling',()=>{
+  const {win,state}=fixture(),{task,idea}=makeTask(win,state);
+  state.tasks[0].contract={mode:'strict',date:'2026-10-18',bugs:true};
+  state.ideas[0].preferences={duration:20,energy:'high',level:'some',goal:'原来确认的目标'};
+  state.chatContext.pending={field:'start',question:'这项旧约定改到几点？',intent:{kind:'schedule',ideaId:idea.id,taskId:task.id,data:{date:task.date,start:task.start,duration:task.duration,replaceTaskId:task.id}}};
+  const before=copy({tasks:state.tasks,preferences:state.ideas[0].preferences,availability:state.availability,pending:state.chatContext.pending,feedback:state.feedback});
+  win.RambleRouter={analyze(){throw Error('model advice must not use the local router');}};
+  win.SparkEngine={planLearning(){throw Error('model advice must not use a local plan');}};
+  const revised={...plan('本轮只写一张项目卡'),steps:[{title:'写项目卡',description:'只写目标用户、问题和一项亲自做过的决策，缺证据处标待补。'}]};
+  const note=turn(win,state,'只修改学习建议，每次10分钟，不预约时间',[{kind:'plan',ideaId:idea.id,data:{duration:10,energy:'low',level:'beginner',goal:'仅本次比较两类岗位'}}],{plans:{[idea.id]:revised}});
+  assert.equal(state.ideas.length,1);assert.equal(state.ideas[0].aiPlan.title,revised.title);assert.equal(state.ideas[0].aiPlan.source,'model');
+  assert.deepEqual(copy({tasks:state.tasks,preferences:state.ideas[0].preferences,availability:state.availability,pending:state.chatContext.pending,feedback:state.feedback}),before);
+  assert.equal(note.taskIds.length,0);assert.equal(note.clarification,undefined);assert.match(note.reply,/没有预约时间/);
+  assert.equal(note.advice[0].ideaId,idea.id);assert.equal(note.advice[0].kind,'plan');assert.equal(note.advice[0].value.title,revised.title);
+  assert.equal(note.trace.some(t=>t.tool==='save_task'),false);
+  turn(win,state,'还没确认本次建议的目标',[{kind:'plan',data:{canApply:false}}],{});
+  assert.deepEqual(copy(state.chatContext.pending),before.pending,'an unapplied plan cannot dismiss an existing rescheduling question');
+});
+
+test('a same-turn plan uses the new interest key without adding an appointment or changing its defaults',()=>{
+  const {win,state}=fixture();
+  const note=turn(win,state,'想学法语，先给五分钟建议，不预约',[{kind:'idea',newIdeaKey:'french',data:{text:'学法语',title:'法语入门',type:'skill',duration:20}},{kind:'plan',newIdeaKey:'french',data:{duration:5}}],{plans:{french:plan('只跟读一个词')}});
+  assert.equal(state.ideas.length,1);assert.equal(state.tasks.length,0);assert.equal(state.ideas[0].preferences.duration,20);
+  assert.equal(note.advice.length,1);assert.equal(note.advice[0].ideaId,state.ideas[0].id);assert.equal(note.advice[0].value.title,'只跟读一个词');
+});
+
+test('successive plans retain separate immutable message advice and undo restores the previous plan',()=>{
+  const {win,state}=fixture(),{idea}=makeTask(win,state);
+  const originalAdvice=copy(state.notes[0].advice),beforeTasks=copy(state.tasks);
+  const first=turn(win,state,'先给第一条建议',[{kind:'plan',ideaId:idea.id,data:{duration:10}}],{plans:{[idea.id]:plan('第一条建议')}});
+  const second=turn(win,state,'再换第二条建议',[{kind:'plan',ideaId:idea.id,data:{duration:5}}],{plans:{[idea.id]:plan('第二条建议')}});
+  assert.deepEqual(copy(state.notes[0].advice),originalAdvice);
+  assert.equal(state.notes.find(n=>n.id===first.id).advice[0].value.title,'第一条建议');
+  assert.equal(state.notes.find(n=>n.id===second.id).advice[0].value.title,'第二条建议');
+  state.ideas[0].aiPlan.steps[0].description='修改当前计划也不能改变旧消息';
+  assert.notEqual(state.notes.find(n=>n.id===second.id).advice[0].value.steps[0].description,state.ideas[0].aiPlan.steps[0].description);
+  state.ideas[0].aiPlan.steps[0].description=state.notes.find(n=>n.id===second.id).advice[0].value.steps[0].description;
+  assert.equal(win.PocketFlow.undo(state,second.id),true);assert.equal(state.ideas[0].aiPlan.title,'第一条建议');assert.deepEqual(copy(state.tasks),beforeTasks);
+});
+
+test('creative plan stores only the supplied exploration and keeps its own message snapshot',()=>{
+  const {win,state}=fixture();
+  const exploration={title:'先画一张卡',assumptions:['一张卡能表达梦境，尚待验证。'],paths:[{title:'画卡片',description:'用三个色块表达一种梦境感受。'}],firstStep:{title:'三个色块',description:'只画一张卡片。'},successSignal:'留下一张卡片。',questions:['最重要的感受是什么？'],timeBudget:10};
+  turn(win,state,'想做梦境展',[{kind:'idea',newIdeaKey:'dream',data:{type:'creative',text:'做梦境小展览',title:'梦境展'}}],{explorations:{dream:exploration}});
+  const idea=state.ideas[0],initial=copy(state.notes[0].advice),preferences=copy(idea.preferences);
+  const next={...exploration,title:'再试声音卡',firstStep:{title:'写一句声音说明',description:'先只写一句话，不录音。'}};
+  const note=turn(win,state,'只改实验建议，用五分钟，不预约',[{kind:'plan',ideaId:idea.id,data:{duration:5}}],{explorations:{[idea.id]:next}});
+  assert.equal(state.ideas[0].exploration.firstStep.title,next.firstStep.title);assert.equal(note.advice[0].kind,'exploration');
+  assert.deepEqual(copy(state.notes[0].advice),initial);assert.deepEqual(copy(state.ideas[0].preferences),preferences);assert.equal(state.tasks.length,0);
+  assert.equal(note.agents.includes(3),true);assert.equal(note.clarification,undefined);
+});
+
+test('missing specialist content and appointment fields in plan reject the whole turn without local fallback',()=>{
+  const {win,state}=fixture(),{idea,task}=makeTask(win,state),before=JSON.stringify(state);
+  const good={kind:'plan',ideaId:idea.id,data:{duration:10}};
+  for(const content of [{},{plans:{[idea.id]:{...plan(),steps:[]}}}]){
+    assert.throws(()=>turn(win,state,'只改建议',[good],content));assert.equal(JSON.stringify(state),before);
+  }
+  for(const bad of [{...good,taskId:task.id},...['date','start','end','replaceTaskId'].map(k=>({...good,data:{duration:10,[k]:k==='date'?'2026-10-18':k==='replaceTaskId'?task.id:'15:00'}})),{kind:'plan',data:{duration:10}}]){
+    assert.throws(()=>turn(win,state,'只改建议',[bad],{plans:{[idea.id]:plan()}}));assert.equal(JSON.stringify(state),before);
+  }
+  assert.equal(win.PocketFlow.canUndo(state.notes[0].id,state),true);
+});

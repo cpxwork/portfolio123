@@ -18,7 +18,7 @@
   const date = value => /^\d{4}-\d{2}-\d{2}$/.test(value || '') ? Number(value.slice(5, 7)) + '月' + Number(value.slice(8)) + '日' : '';
   const localDay = value => value && Number.isFinite(Date.parse(value)) ? HaipiguaCore.clock(new Date(value)).today : '';
   const status = value => ({accepted: '等你试一试', done: '完成啦', partial: '尝试了一点', skipped: '这次先暂停'}[value] || '待确认');
-  const action = (name, label, id = '') => `<button class="bubble-action" data-action="${name}" data-id="${esc(id)}">${label}</button>`;
+  const action = (name, label, id = '', noteId = '') => `<button class="bubble-action" data-action="${name}" data-id="${esc(id)}"${noteId ? ` data-note-id="${esc(noteId)}"` : ''}>${label}</button>`;
   const sprite = (id, cls = '') => `<span class="sprite ${robots[id].class} ${cls}" aria-hidden="true"></span>`;
   function toast(message, error = false) {
     const node = document.createElement('div'); node.className = 'toast' + (error ? ' error' : ''); node.textContent = message;
@@ -49,6 +49,7 @@
       return bubble(4, feedbackBubble(feedback) + modelReceipt(note)) + '<div class="route-line">回回把行动结果交回皮皮</div>' + bubble(1, `<p>收好了：${esc(feedback.taskTitle)}，${feedback.minutes} 分钟。下次安排会参考这条反馈，之前的喜欢也留着。</p><p class="small">你的解释是记录，不是性格定论。想换一个兴趣也可以继续说。</p>`, '接住反馈，准备下一轮');
     }
     const learning = ideas.filter(i => i.type === 'skill'), creative = ideas.filter(i => i.type === 'creative');
+    const savedPlans = (note.advice || []).filter(a => a.kind === 'plan'), savedExplorations = (note.advice || []).filter(a => a.kind === 'exploration');
     const understanding = note.understanding;
     let content = understanding?.goal ? `<p><strong>我听到的主要目标：</strong>${text(understanding.goal)}</p>${(understanding.facts || []).length ? `<p>你已经告诉我的：</p><ul>${understanding.facts.map(f => `<li>${text(f.text)}</li>`).join('')}</ul>` : ''}${(understanding.constraints || []).length ? `<p>安排时要顾及：</p><ul>${understanding.constraints.map(f => `<li>${text(f.text)}</li>`).join('')}</ul>` : ''}<p class="small">这是皮皮对原话的理解，可以直接纠正；不会自动变成永久确认记忆。</p>` : '<p>' + (ideas.length ? `这段话关联到 ${ideas.length} 个目标或兴趣。` : '这段原话已经收进口袋。') + (learning.length ? '学习与准备交给滴答，' : '') + (creative.length ? '脑洞交给啵啵，' : '') + '不用你逐个搬过去。</p>';
     if (note.clarification) content += `<p><strong>有一处想问清楚：</strong>${text(note.clarification)}</p>`;
@@ -57,15 +58,16 @@
     let result = bubble(1, content);
     if (note.agents.includes(2)) {
       const learningTasks = tasks.filter(t => t.kind !== 'experiment');
-      let line = learningTasks.length ? learningTasks.map(t => `<p><strong>${esc(t.title)}</strong><br><span class="time-sticker">${date(t.date)} ${esc(t.start)}—${esc(t.end)} · ${t.duration} 分钟</span></p><p>${text(t.description || '')}</p>${t.successCriterion ? `<p><strong>留下什么算有收获：</strong>${text(t.successCriterion)}</p>` : ''}${resources(t.resources)}${action('task-detail', '看看这一步 ↗', t.id)}`).join('<hr>') : learning.length ? learning.map(i => i.aiPlan ? `<p><strong>${esc(i.aiPlan.title || i.title)}</strong></p><ol>${i.aiPlan.steps.map(s => `<li><strong>${esc(s.title)}</strong>：${text(s.description)}</li>`).join('')}</ol><p><strong>具体产出：</strong>${text(i.aiPlan.successCriterion)}</p><p class="small">为什么先做这一步：${text(i.aiPlan.rationale)}<br>还没有占用日程。确认空闲后再约时间。</p>${resources(i.aiPlan.resources)}` : `<p>“${esc(i.title)}”我接住啦。日期和时间还没确定，我们先把下一小步问清楚。</p>`).join('<hr>') : '<p>你的时间与偏好已经交给我处理。具体记录在上面的理解详情里；遇到撞期，我会先问你。</p>';
+      const suggestions = savedPlans.length ? savedPlans.map(a => ({title: state().ideas.find(i => i.id === a.ideaId)?.title, value: a.value})) : note.advice === undefined && note.source !== 'model' ? learning.map(i => ({title: i.title, value: i.aiPlan})) : [];
+      let line = learningTasks.length ? learningTasks.map(t => `<p><strong>${esc(t.title)}</strong><br><span class="time-sticker">${date(t.date)} ${esc(t.start)}—${esc(t.end)} · ${t.duration} 分钟</span></p><p>${text(t.description || '')}</p>${t.successCriterion ? `<p><strong>留下什么算有收获：</strong>${text(t.successCriterion)}</p>` : ''}${resources(t.resources)}${action('task-detail', '看看这一步 ↗', t.id)}`).join('<hr>') : suggestions.length ? suggestions.map(({title, value: p}) => p ? `<p><strong>${esc(p.title || title)}</strong></p><ol>${p.steps.map(s => `<li><strong>${esc(s.title)}</strong>：${text(s.description)}</li>`).join('')}</ol><p><strong>具体产出：</strong>${text(p.successCriterion)}</p><p class="small">为什么先做这一步：${text(p.rationale)}<br>这是本条消息的建议，没有预约时间。</p><p><strong>下一次从这里接着试：</strong>${text(p.nextStep)}</p>${resources(p.resources)}` : `<p>“${esc(title)}”我接住啦。日期和时间还没确定，我们先把下一小步问清楚。</p>`).join('<hr>') : note.source === 'model' && note.advice === undefined ? `<p>${text(note.reply)}</p>` : '<p>你的时间与偏好已经交给我处理。具体记录在上面的理解详情里；遇到撞期，我会先问你。</p>';
       if (learningTasks.length) line += '<p class="small">这里展示当前保存的安排。教程按钮是搜索入口，还没有替你筛选或核验视频。</p>';
       result += '<div class="route-line">皮皮 → 滴答 · 学习与时间</div>' + bubble(2, line);
     }
     if (note.agents.includes(3)) {
-      let line = creative.length ? creative.map(i => {
-        const r = i.exploration || SparkEngine.exploreIdea({idea: i.text, timeBudget: 10});
-        return `<p><strong>${esc(i.title)}</strong></p><p>先试这一小步：${text(typeof r.firstStep === 'string' ? r.firstStep : r.firstStep?.title || '')}</p><p class="small">观察信号：${text(r.successSignal)}</p>${resources(r.searchLinks)}${action('continue', '接着聊这个脑洞 ↗', i.id)}${action('explore-detail', '展开探索路径', i.id)}`;
-      }).join('<hr>') : '<p>我已经接到这个小实验的时间。先试最小的一步，结果交给回回，我们再一起改路径。</p>';
+      const suggestions = savedExplorations.length ? savedExplorations.map(a => ({idea: state().ideas.find(i => i.id === a.ideaId), value: a.value, noteId: note.id})) : note.advice === undefined && note.source !== 'model' ? creative.map(i => ({idea: i, value: i.exploration || SparkEngine.exploreIdea({idea: i.text, timeBudget: 10})})) : [];
+      let line = suggestions.length ? suggestions.map(({idea: i, value: r, noteId}) => {
+        return `<p><strong>${esc(r.title || i?.title)}</strong></p><p>先试这一小步：${text(typeof r.firstStep === 'string' ? r.firstStep : r.firstStep?.title || '')}</p>${r.firstStep?.description ? `<p>${text(r.firstStep.description)}</p>` : ''}<p class="small">观察信号：${text(r.successSignal)}</p>${resources(r.searchLinks)}${action('continue', '接着聊这个脑洞 ↗', i?.id)}${action('explore-detail', '展开探索路径', i?.id, noteId)}`;
+      }).join('<hr>') : note.source === 'model' && note.advice === undefined ? `<p>${text(note.reply)}</p>` : '<p>我已经接到这个小实验的时间。先试最小的一步，结果交给回回，我们再一起改路径。</p>';
       line += '<p class="small">这是待验证的探索方向，不代表已经查证可行。</p>';
       result += '<div class="route-line">皮皮 → 啵啵 · 创意与验证</div>' + bubble(3, line);
     }
@@ -230,7 +232,7 @@
   document.addEventListener('click', async event => {
     const button = event.target.closest('button');
     if (!button) return;
-    const {action: name, id, view: next, character, sample} = button.dataset;
+    const {action: name, id, noteId, view: next, character, sample} = button.dataset;
     if (sending && !['close', 'bottom', 'clear-bugs'].includes(name) && !character && !next) { toast('这一轮还在处理，请稍等。原文留着，没有重复发送。'); return; }
     if (next) { go(next); return; }
     if (character) { setRobot(+character); return; }
@@ -263,7 +265,7 @@
         const task = state().tasks.find(t => t.id === id); if (!task) return;
         dialog(esc(task.title), `<p class="time-sticker">${date(task.date)} ${esc(task.start)}—${esc(task.end)} · ${task.duration} 分钟</p><p>${text(task.description)}</p>${resources(task.resources)}<p class="hint">教程为搜索入口，未进行内容筛选或查证。</p><div class="actions">${task.status === 'accepted' ? `<button class="primary" data-action="feedback" data-id="${esc(id)}">带回反馈</button>` : `<span class="hint">${status(task.status)}</span>`}<button class="secondary" data-action="continue" data-id="${esc(task.ideaId)}">在对话里调整</button></div>`);
       } else if (name === 'explore-detail') {
-        const idea = state().ideas.find(i => i.id === id), r = idea?.exploration; if (!r) return;
+        const idea = state().ideas.find(i => i.id === id), saved = noteId ? state().notes.find(n => n.id === noteId)?.advice?.find(a => a.kind === 'exploration' && a.ideaId === id) : null, r = noteId ? saved?.value : idea?.exploration; if (!r) return;
         dialog('啵啵的探索草稿', `<p><strong>${esc(idea.title)}</strong></p><p>先验证这些假设：</p><ol>${(r.assumptions || []).map(s => `<li>${esc(typeof s === 'string' ? s : s.text || s.title)}</li>`).join('')}</ol>${(r.paths || []).map(p => `<p><strong>${esc(p.title)}</strong><br>${text(p.description)}</p>`).join('')}<p><strong>第一次试：</strong>${text(typeof r.firstStep === 'string' ? r.firstStep : r.firstStep?.title)}</p>${resources(r.searchLinks)}<p class="hint">这些方向尚未查证。涉及实际制造或工程项目，需要专业资料与条件核验。</p><button class="primary" data-action="continue" data-id="${esc(id)}">继续问啵啵 ↗</button>`);
       } else if (name === 'play-video') {
         const file = await app.getMedia(id); if (!file) throw Error('这个浏览器里没有这段视频，可能是从文字备份导入的。');

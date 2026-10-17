@@ -40,6 +40,100 @@ test('health has truthful capability flags and no config names or secrets; paid 
   assert.equal(JSON.stringify(ready.body).includes(ENV.MODEL_API_KEY), false);
 });
 
+test('native router parameters propose advice without an appointment and planner sees whitelisted earlier advice', async () => {
+  const route = {intents: [{kind: 'plan', ideaId: 'idea-1', data: {canApply: true, duration: 5, goal: '只练一个舒适音'}}]};
+  const previous = plan().plans['new-0'];
+  const state = context(); state.ideas[0].aiPlan = {...previous, resources: [{url: 'PRIVATE_LINK'}], secret: 'DO_NOT_FORWARD'};
+  const before = JSON.stringify(state);
+  const p = provider([() => ({ok: true, text: async () => JSON.stringify({choices: [{message: {content: null, tool_calls: [{type: 'function', function: {name: 'route_intents', arguments: JSON.stringify(route)}}]}}]})}), {plans: {'idea-1': previous}}]);
+  const result = await createHandler()(request(input({text: '只修改唱歌建议，五分钟，只练一个音，不预约', context: state})), ENV, p);
+  assert.equal(result.status, 200); assert.equal(p.calls.length, 2);
+  assert.equal(result.body.analysis.intents[0].kind, 'plan'); assert.equal(result.body.analysis.clarification, undefined);
+  assert.equal(p.calls[0].tools[0].function.name, 'route_intents'); assert.equal(p.calls[0].tool_choice, 'auto');
+  assert.equal(p.calls[0].response_format, undefined);
+  assert.equal(result.body.trace[0].format, 'function_arguments');
+  const target = JSON.parse(p.calls[1].messages[1].content).targets[0];
+  assert.equal(target.duration, 5); assert.equal(target.idea.aiPlan.steps[0].description, previous.steps[0].description);
+  assert.equal(JSON.stringify(target).includes('PRIVATE_LINK'), false); assert.equal(JSON.stringify(target).includes('DO_NOT_FORWARD'), false);
+  assert.equal(JSON.stringify(state), before, 'server must not mutate caller context or existing appointment');
+});
+
+test('unrecognized, multiple or malformed native tool calls never execute or fall through to plaintext', async () => {
+  const valid = {type: 'function', function: {name: 'route_intents', arguments: JSON.stringify(note())}};
+  for (const calls of [[{...valid, function: {...valid.function, name: 'delete_records'}}], [valid, valid], [{...valid, function: {...valid.function, arguments: '{'}}]]) {
+    const p = provider([() => ({ok: true, text: async () => JSON.stringify({choices: [{message: {content: JSON.stringify(note()), tool_calls: calls}}]})})]);
+    const result = await createHandler()(request(input()), ENV, p);
+    assert.equal(result.status, 502); assert.equal(result.body.error.code, 'MODEL_FORMAT'); assert.equal(p.calls.length, 1);
+  }
+});
+
+test('question-only representation variants preserve the real model question without creating a domain operation', async () => {
+  for (const route of [{clarification: {question: '你说的是哪一天？'}}, {intents: [{kind: 'clarification', data: {question: '你说的是哪一天？'}}]}, {intents: [{kind: 'question', data: {text: '你说的是哪一天？'}}]}]) {
+    const p = provider([route]);
+    const result = await createHandler()(request(input({text: '下午六点呢'})), ENV, p);
+    assert.equal(result.status, 200); assert.deepEqual(result.body.analysis.intents, []);
+    assert.equal(result.body.analysis.clarification.question, '你说的是哪一天？'); assert.equal(p.calls.length, 1);
+    assert.deepEqual(Object.keys(result.body.content.plans), []);
+  }
+  const p = provider([{intents: [{kind: 'question', data: {text: '按这个日期保存', date: '2026-10-18'}}]}, note()]);
+  const result = await createHandler()(request(input()), ENV, p);
+  assert.equal(p.calls.length, 2, 'an action-bearing unknown kind is not accepted as a harmless question');
+  assert.equal(result.body.analysis.intents[0].kind, 'note');
+});
+
+test('complete busy facts remain applicable despite a colliding appointment and do not reschedule it on the server', async () => {
+  const state = context(), before = JSON.stringify(state);
+  const p = provider([{intents: [{kind: 'busy', data: {canApply: true, date: '2026-10-17', start: '11:00', end: '12:00', label: '实验'}}]}]);
+  const result = await createHandler()(request(input({text: '今天十一点到十二点有实验，没空练唱歌。', context: state})), ENV, p);
+  assert.equal(result.status, 200); assert.equal(result.body.analysis.intents[0].data.canApply, true); assert.equal(p.calls.length, 1);
+  assert.equal(JSON.stringify(state), before);
+  assert.equal(result.body.analysis.intents.some(i => i.kind === 'schedule'), false);
+});
+
+test('an omitted time range gets a real bounded model review while uncertain busy time is not invented', async () => {
+  for (const confirmed of [true, false]) {
+    const first = {intents: [{kind: 'plan', ideaId: 'idea-1', data: {canApply: true, duration: 5}}]};
+    const second = {intents: confirmed ? [{kind: 'busy', data: {canApply: true, date: '2026-10-18', start: '14:00', end: '15:00', label: '实验'}}] : []};
+    const p = provider([first, second, {plans: {'idea-1': plan().plans['new-0']}}]);
+    const text = confirmed ? '只改唱歌建议，不预约。明天14:00–15:00有实验。' : '只改唱歌建议。如果明天14:00–15:00有实验会没空，但没确定，先别记。';
+    const result = await createHandler()(request(input({text, context: context()})), ENV, p);
+    assert.equal(result.status, 200); assert.equal(p.calls.length, 3);
+    assert.equal(result.body.analysis.intents.some(i => i.kind === 'busy'), confirmed);
+    assert.equal(result.body.trace.some(t => t.action === 'check_information_coverage'), true);
+    assert.equal(result.body.trace.filter(t => t.kind === 'model').length, 3);
+    assert.deepEqual(p.calls[1].response_format, {type: 'json_object'});
+    assert.equal(p.calls[1].tools, undefined);
+    assert.match(p.calls[1].messages[0].content, /\{"intents":\[\]\}/);
+    assert.equal(result.body.analysis.intents.some(i => i.kind === 'schedule'), false);
+  }
+});
+
+test('the coverage review cannot expand its authority into appointments or new interests', async () => {
+  const p = provider([{intents: [{kind: 'plan', ideaId: 'idea-1', data: {canApply: true, duration: 5}}]}, {intents: [{kind: 'schedule', ideaId: 'idea-1', data: {canApply: true, date: '2026-10-18', start: '14:00', duration: 10}}]}]);
+  const result = await createHandler()(request(input({text: '只改唱歌建议，另外明天14:00–15:00有实验。', context: context()})), ENV, p);
+  assert.equal(result.status, 502); assert.equal(p.calls.length, 2);
+  assert.equal(result.body.source, undefined);
+});
+
+test('advice carrying appointment edits is rejected even after the single format repair', async () => {
+  for (const forbidden of [{taskId: 'task-1'}, {date: '2026-10-18'}, {start: '13:00'}, {end: '13:10'}, {replaceTaskId: 'task-1'}]) {
+    const item = {kind: 'plan', ideaId: 'idea-1', data: {canApply: true, duration: 5, ...forbidden}};
+    if (forbidden.taskId) { item.taskId = forbidden.taskId; delete item.data.taskId; }
+    const p = provider([{intents: [item]}, {intents: [item]}]);
+    const result = await createHandler()(request(input({text: '只修改建议，不动预约', context: context()})), ENV, p);
+    assert.equal(result.status, 502); assert.equal(result.body.error.formatIssue, 'PLAN_HAS_SCHEDULE_FIELDS'); assert.equal(p.calls.length, 2);
+  }
+});
+
+test('creative advice uses the existing idea and calls the explorer without creating an appointment proposal', async () => {
+  const state = context(); state.ideas[0].type = 'creative';
+  const exploration = {title: '纸上验证', assumptions: ['愿意交换的同学存在，待验证'], paths: [{title: '先问一人', description: '询问一位自愿同学的真实经历'}], firstStep: {title: '写一个问题', description: '写下上一次怎么处理闲置书'}, successSignal: '留下一条有来源的回答', questions: [], timeBudget: 10};
+  const p = provider([{intents: [{kind: 'plan', ideaId: 'idea-1', data: {canApply: true, duration: 10}}]}, {explorations: {'idea-1': exploration}}]);
+  const result = await createHandler()(request(input({text: '只给这个创意一个验证动作', context: state})), ENV, p);
+  assert.equal(result.status, 200); assert.equal(p.calls.length, 2); assert.match(p.calls[1].messages[0].content, /Agent 3/);
+  assert.deepEqual(result.body.analysis.intents[0].agents, ['Agent 3']); assert.equal(result.body.content.explorations['idea-1'].firstStep.title, '写一个问题');
+});
+
 test('origin allowlist blocks foreign/missing/unlisted local port; no bearer token needed on allowed origin', async () => {
   for (const origin of ['', 'https://attacker.example', 'http://localhost:5555', 'http://127.0.0.1.attacker.example:8877']) {
     const p = provider([note()]);

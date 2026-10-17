@@ -16,6 +16,15 @@
     const links = list => list === undefined || Array.isArray(list) && list.length <= 100 && list.every(r => r && str(r.label, 300) && str(r.url, 5000));
     const timestamp = value => value === undefined || str(value, 40) && Number.isFinite(Date.parse(value));
     const facts = list => list === undefined || Array.isArray(list) && list.length <= 10 && list.every(f => f && str(f.text, 600) && str(f.evidence, 800));
+    const nonempty = (value, max) => str(value, max) && !!value.trim();
+    const adviceSteps = value => Array.isArray(value) && value.length >= 1 && value.length <= 4 && value.every(s => s && nonempty(s.title, 150) && nonempty(s.description, 1500));
+    const adviceStrings = value => Array.isArray(value) && value.length <= 6 && value.every(s => nonempty(s, 600));
+    const adviceLinks = value => Array.isArray(value) && value.length <= 6 && value.every(r => r && nonempty(r.label, 100) && str(r.url, 1500) && /^https:\/\/[^\s/?#]+(?:[/?#][^\s]*)?$/.test(r.url));
+    const adviceValue = (kind, value) => {
+      if (!value || typeof value !== 'object' || Array.isArray(value) || value.source !== 'model' || !nonempty(value.title, 150)) return false;
+      if (kind === 'plan') return adviceSteps(value.steps) && nonempty(value.successCriterion, 600) && nonempty(value.rationale, 1000) && nonempty(value.nextStep, 600) && adviceLinks(value.resources);
+      return adviceStrings(value.assumptions) && adviceSteps(value.paths) && adviceSteps([value.firstStep]) && nonempty(value.successSignal, 1000) && adviceStrings(value.questions) && Number.isInteger(value.timeBudget) && value.timeBudget >= 3 && value.timeBudget <= 120 && adviceLinks(value.searchLinks) && typeof value.feedbackApplied === 'boolean';
+    };
     const ids = new Set(), tasks = new Map();
     for (const i of data.ideas) {
       if (!i || !str(i.id, 100) || ids.has(i.id) || !str(i.text, 8000) || !str(i.title, 200) || !['skill', 'creative', 'park'].includes(i.type)) return false;
@@ -36,6 +45,7 @@
     }
     if (data.notes && (!Array.isArray(data.notes) || data.notes.length > 2000 || data.notes.some(n => !n || !str(n.id, 100) || !str(n.text, 8000) || !str(n.reply, 16000) || !Array.isArray(n.agents) || n.agents.some(a => ![1, 2, 3, 4].includes(a))))) return false;
     if (data.notes?.some(n => !strings(n.ideaIds) || !strings(n.taskIds) || !timestamp(n.createdAt))) return false;
+    if (data.notes?.some(n => n.advice !== undefined && (!Array.isArray(n.advice) || n.advice.length > 12 || n.advice.some(a => !a || !ids.has(a.ideaId) || !['plan', 'exploration'].includes(a.kind) || !adviceValue(a.kind, a.value))))) return false;
     if (data.notes?.some(n => n.trace && (!Array.isArray(n.trace) || n.trace.length > 100 || n.trace.some(t => !t || typeof t !== 'object')) || n.understanding && (!facts(n.understanding.facts) || !facts(n.understanding.constraints) || !strings(n.understanding.unknowns, 500)))) return false;
     if (data.availability) {
       if (typeof data.availability !== 'object' || Array.isArray(data.availability)) return false;
@@ -95,7 +105,12 @@
     function modelContext() {
       const trim = (value, max) => String(value || '').slice(0, max);
       const prefs = value => ({duration: Number(value?.duration) || 10, energy: ['low', 'medium', 'high'].includes(value?.energy) ? value.energy : 'medium', level: ['beginner', 'some', 'advanced'].includes(value?.level) ? value.level : 'beginner', ...(value?.goal ? {goal: trim(value.goal, 300)} : {})});
-      const ideas = state.ideas.slice(0, 20).map(i => ({id: i.id, text: trim(i.text, 350), title: trim(i.title, 100), type: i.type, archived: !!i.archived, preferences: prefs(i.preferences)}));
+      const adviceText = (value, max) => typeof value === 'string' ? value.slice(0, max) : '';
+      const adviceSteps = (value, max = 4) => (Array.isArray(value) ? value : []).slice(0, max).map(s => ({title: adviceText(s?.title, 100), description: adviceText(s?.description, 600)}));
+      const adviceStrings = value => (Array.isArray(value) ? value : []).slice(0, 3).filter(s => typeof s === 'string').map(s => s.slice(0, 300));
+      const previousPlan = value => ({title: adviceText(value.title, 100), steps: adviceSteps(value.steps), successCriterion: adviceText(value.successCriterion, 400), rationale: adviceText(value.rationale, 400), nextStep: adviceText(value.nextStep, 400)});
+      const previousExploration = value => ({title: adviceText(value.title, 100), assumptions: adviceStrings(value.assumptions), paths: adviceSteps(value.paths, 3), firstStep: {title: adviceText(typeof value.firstStep === 'string' ? value.firstStep : value.firstStep?.title, 100), description: adviceText(value.firstStep?.description, 600)}, successSignal: adviceText(value.successSignal, 400), questions: adviceStrings(value.questions), ...(Number.isInteger(value.timeBudget) && value.timeBudget >= 3 && value.timeBudget <= 120 ? {timeBudget: value.timeBudget} : {})});
+      const ideas = state.ideas.slice(0, 20).map(i => ({id: i.id, text: trim(i.text, 350), title: trim(i.title, 100), type: i.type, archived: !!i.archived, preferences: prefs(i.preferences), ...(i.aiPlan && typeof i.aiPlan === 'object' ? {aiPlan: previousPlan(i.aiPlan)} : {}), ...(i.exploration && typeof i.exploration === 'object' ? {exploration: previousExploration(i.exploration)} : {})}));
       const ids = new Set(ideas.map(i => i.id));
       const tasks = state.tasks.filter(t => ids.has(t.ideaId)).slice(-20).map(t => ({id: t.id, ideaId: t.ideaId, title: trim(t.title, 120), date: t.date, start: t.start, end: t.end, duration: t.duration, status: t.status, successCriterion: trim(t.successCriterion, 300), nextStep: trim(t.nextStep, 300)}));
       const taskIds = new Set(tasks.map(t => t.id));

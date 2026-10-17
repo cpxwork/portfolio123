@@ -42,11 +42,17 @@ powershell -ExecutionPolicy Bypass -File .\server\start-local.ps1
 }
 ```
 
-`today` 和 `clockMinutes` 必须由前端按 `Asia/Shanghai` 计算。`text` 完整保留，1–8000 个 JavaScript 字符，HTTP 请求上限128KiB。上下文只取白名单字段并有条数/长度限制；密钥、用户未同意上传的媒体不应进入此接口。
+`today` 和 `clockMinutes` 必须由前端按 `Asia/Shanghai` 计算。`text` 完整保留，1–8000 个 JavaScript 字符，HTTP 请求上限128KiB。上下文只取白名单字段并有条数/长度限制；已有 `ideas[].aiPlan` 与 `ideas[].exploration` 只保留有限的标题、步骤、标准和下一步等文字，不包含资源链接、媒体、秘密或额外属性。密钥、用户未同意上传的媒体不应进入此接口。
 
 成功：`{source:"model",analysis:{intents,clarification?,understanding?},content:{plans,explorations,reflections},trace,usage,requestId}`。沿用前端 PocketFlow 可校验的 intents 格式。`understanding` 包含可纠正的 `goal`、`facts`、`constraints`、`unknowns`；facts/constraints 必须附 `evidence`，服务端只保留逐字匹配本次原话、近期原话或用户确认事实的证据片段。证据匹配证明原话存在，不代表模型的概括绝对正确；不要直接自动写为确认记忆。
 
 Agent 1 独立调用模型理解/分流，再执行真实只读历史提取、确定性撞期检查；有相关任务时再并行调用 Agent 2 计划、Agent 3 创意实验、Agent 4 反馈。没有涉及的角色不调用、不伪造 trace。每次最多4次模型调用，资源只给标明来源的固定安全入口，不声称本次搜过网页。文本模型不看视频。
+
+路由包含独立的 `plan` 意图，结构为 `{kind:"plan",ideaId?,newIdeaKey?,data:{canApply,duration?,energy?,level?,goal?}}`。必须明确关联已有兴趣，或同轮先创建的 `newIdeaKey`；不允许附带 `taskId/date/start/end/replaceTaskId`。`plan` 不要求预约日期时间：技能目标生成 `content.plans`，创意目标生成 `content.explorations`。前端只更新建议并保存本条 `note.advice` 快照，本轮预算不写长期偏好，不新增/修改旧任务或陪伴约定，不清除已有待改期问题。后续建议更新不改变旧消息快照；旧版无快照的模型消息只呈现自己的已保存回复。缺少合格专职模型内容则整轮拒绝，不使用本地模板补成模型输出。
+
+Agent 1 的模型请求提供可选 `route_intents` function tool，使用 `tool_choice:"auto"`；服务也接收并校验模型直接返回的 JSON。`trace.format` 区分 `function_arguments` 与 JSON 输出。当前真实回归记录为 JSON 输出，提供 tools 配置不等于实际发生或验证了原生函数调用。
+
+当“只改建议”的原话还包含时间范围而首次路由未给出忙碌等时间操作时，服务可另请 Agent 1 复核遗漏信息。该复核明确使用 `response_format:{type:"json_object"}`，不提供 tools；它不是一次已验证的原生工具调用。代码只触发复核，忙碌事实仍由模型提取并经校验；复核只允许补 busy/note，不能改建议、创建兴趣或预约。确定的实验/课程时段与“不预约学习”可并存；假设、未确定或明确不记录的时段不应保存。复核计入同一轮4次调用、95秒总预算，不另开隐藏预算。
 
 反馈表单额外发送 `reportedFeedback:{taskId,completion,minutes,feeling,reason}`。服务端直接验证这些人填写的事实，只调用反馈模型给建议，不让模型重新抽取或改写完成情况。自然语言反馈仍由Agent 1理解。日期工具以用户的 `today` 校正无歧义的单个“明天/后天”等相对日，不以UTC的 `now` 充当本地今天。
 
@@ -62,7 +68,7 @@ Agent 1 独立调用模型理解/分流，再执行真实只读历史提取、�
 
 只允许前端 `http://127.0.0.1:8877`、`http://localhost:8877` 及本服务8878的精确 Origin；Host 也必须是本机服务端口。不要求把共享口令塞进浏览器。主线程反向代理必须转发真实浏览器 Origin，不能自行补造缺失的 Origin；发送到8878时使用其本机 Host。
 
-一次只处理一段对话，同编号重试可共享进行中的请求；每分钟12段，每次启动最多60段，不自动重发整个请求。单次普通模型调用45秒，单次结构修复最多20秒，全流程最多95秒；没有进程在响应之后继续发起新角色调用。内部缓存至多64项，10分钟过期。重启不是绕过模型账户额度的承诺。
+一次只处理一段对话，同编号重试可共享进行中的请求；每分钟12段，每次启动最多60段，不自动重发整个请求。普通角色调用、信息覆盖复核和至多一次结构修复共享整轮最多4次调用、95秒；单次普通模型调用上限45秒，结构修复最多20秒且受剩余总预算限制。没有进程在响应之后继续发起新角色调用。内部缓存至多64项，10分钟过期。重启不是绕过模型账户额度的承诺。
 
 此简化服务只用于用户自己机器上的演示。不能把8878监听改成公网直接发布；公网部署需增加账号鉴权、配额及持久化隔离，并重新确认部署方式。
 
@@ -72,7 +78,7 @@ Agent 1 独立调用模型理解/分流，再执行真实只读历史提取、�
 node --test --test-isolation=none tests/server-local.test.cjs
 ```
 
-25项 mock/本机HTTP检查涵盖：两个免费型号可明确选择、收费及其他型号拒绝、无秘密泄露、1305/1113/1000准确分类、精确来源和Host、8000字原话、证据引用过滤、求职目标不造日程、本地日期、撞期澄清、空引用规范化、无效ID/日期、真实反馈传入下一轮、一轮有界修复、表单事实保护、中性表情兼容、并发/重试去重、上游失败/超时、请求和调用限制。这些测试不调用智谱，不代表真实账号额度或输出质量已验证。
+33项 mock/本机HTTP检查涵盖：两个免费型号可明确选择、收费及其他型号拒绝、无秘密泄露、1305/1113/1000准确分类、精确来源和Host、8000字原话、证据引用过滤、求职目标不造日程、本地日期、撞期澄清、空引用规范化、无效ID/日期、反馈传入下一轮、一轮有界修复、表单事实保护、中性表情兼容、并发/重试去重、上游失败/超时、请求和调用限制，以及建议意图、旧建议白名单和忙碌信息复核等合同。这些测试不调用智谱，不代表真实账号额度或输出质量已验证。
 
 在 `haipigua` 目录运行全部离线回归：
 
@@ -80,6 +86,6 @@ node --test --test-isolation=none tests/server-local.test.cjs
 node --test --test-isolation=none tests/*.test.cjs
 ```
 
-当前66项通过：本地流程27、模型桥6、客户端8、本机服务25。真实调用另用 `node scripts/evaluate-live.cjs --case route` 或完整四轮 `node scripts/evaluate-live.cjs`，运行期间暂停浏览器发送。脚本和判定规则见 `../scripts/README.md`。
+当前85项通过：前端52（本地流程27、模型桥11、客户端11、消息渲染3）、本机服务33。真实调用另用 `node scripts/evaluate-live.cjs --case route`、基础四轮 `node scripts/evaluate-live.cjs` 或固定合成上下文的五种对话 `node scripts/evaluate-conversations.cjs`；运行期间暂停浏览器发送。脚本和判定规则见 `../scripts/README.md`。
 
-2026-10-17修复后的真实四轮合成评测全部通过，使用 `glm-4-flash-250414` 共8次真实调用；上次反馈使下次任务从10分钟缩短到5分钟。此前失败及本次结果见 `../LIVE_VALIDATION.md`。一次通过不表示所有输入和后续容量都有保证。
+2026-10-17当前版本基础四轮再次全部通过，使用 `glm-4-flash-250414` 共8次真实调用（分流3、反馈2、下一步2、歧义1）。本轮原先失败的“只改建议”“完整忙碌时段”“继续创意”三条已连续复跑通过；覆盖复核改为严格 JSON 输出后，含加强版假设忙碌与混合真实忙碌的五种固定样例5/5通过。浏览器另以2次真实调用生成“撰写嗨皮瓜项目卡”建议，没有新增预约，行动约定仍为原有1项。失败历史与修复状态见 `../LIVE_VALIDATION.md`。这些结果不能推算泛化准确率、长期稳定性或其他浏览器场景的表现。

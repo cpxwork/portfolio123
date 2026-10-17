@@ -13,7 +13,7 @@
   // is never reparsed with local templates under a misleading “model” label.
   function validateAnalysis(raw,state){
     if(!object(raw)||!Array.isArray(raw.intents)||raw.intents.length>12)throw Error('模型意图格式不完整，记录尚未改动。');
-    const kinds=['idea','preference','schedule','busy','feedback','explore','note'],newKeys=new Set(),feedbackTasks=new Set();
+    const kinds=['idea','plan','preference','schedule','busy','feedback','explore','note'],newKeys=new Set(),feedbackTasks=new Set();
     const intents=raw.intents.map(i=>{
       if(!object(i)||!kinds.includes(i.kind)||!object(i.data)||(i.agents!==undefined&&!Array.isArray(i.agents)))throw Error('模型返回了不支持的操作，记录尚未改动。');
       const out={kind:i.kind,agents:(i.agents||[]).filter(a=>/^Agent [1-4]$/.test(a)),data:{}};
@@ -25,6 +25,7 @@
       if(i.kind==='idea'){if(!out.newIdeaKey||newKeys.has(out.newIdeaKey)||out.ideaId)throw Error('新兴趣交接不完整，记录尚未改动。');newKeys.add(out.newIdeaKey);}
       else if(out.newIdeaKey&&!newKeys.has(out.newIdeaKey))throw Error('新兴趣应先记录再交接，记录尚未改动。');
       const data=i.data;
+      if(i.kind==='plan'&&(out.taskId||['date','start','end','replaceTaskId'].some(k=>data[k]!==undefined)))throw Error('行动建议不能附带预约或改期操作，记录尚未改动。');
       for(const k of ['text','title','type','date','start','end','energy','level','goal','completion','feeling','reason','nextAvailable','resources','replaceTaskId','label','notice'])if(data[k]!==undefined){if(typeof data[k]!=='string')throw Error('模型字段类型不正确，记录尚未改动。');out.data[k]=data[k].slice(0,k==='text'?8000:k==='reason'?2000:500);}
       for(const [k,allowed] of Object.entries({type:['skill','creative','park'],energy:['low','medium','high'],level:['beginner','some','advanced'],completion:['done','partial','skipped'],feeling:['easy','right','hard']}))if(out.data[k]!==undefined&&!allowed.includes(out.data[k]))throw Error('模型选项不正确，记录尚未改动。');
       for(const k of ['duration','minutes'])if(data[k]!==undefined){if(!Number.isInteger(data[k])||data[k]<(k==='duration'?3:0)||data[k]>(k==='duration'?120:480))throw Error('模型时长不合法，记录尚未改动。');out.data[k]=data[k];}
@@ -39,7 +40,7 @@
       if(replacement&&out.newIdeaKey)throw Error('已有任务不能改期到新的兴趣，记录尚未改动。');
       if(out.data.canApply){
         if(i.kind==='idea'&&(!out.data.text?.trim()||!out.data.type))throw Error('模型兴趣记录不完整。');
-        if(['preference','schedule','explore'].includes(i.kind)&&!out.ideaId&&!out.newIdeaKey)throw Error('模型未说明要交接哪个兴趣。');
+        if(['plan','preference','schedule','explore'].includes(i.kind)&&!out.ideaId&&!out.newIdeaKey)throw Error('模型未说明要交接哪个兴趣。');
         if(['schedule','busy'].includes(i.kind)&&(!out.data.date||!out.data.start))throw Error('模型未给出完整日期与时间，记录尚未改动。');
         if(i.kind==='busy'&&!out.data.end)throw Error('模型未给出忙碌时段的结束时间。');
         if(i.kind==='feedback'&&(!out.taskId||!out.data.completion||!state.tasks.some(t=>t.id===out.taskId&&t.status==='accepted')))throw Error('模型反馈目标无效或已经反馈，记录尚未改动。');
@@ -142,20 +143,34 @@
     if(!options.analysis&&currentIdea?.type==='creative'&&/能不能|行不行|可行|怎么办|渠道|路径|方法|细节|先问|先找|要不/.test(text)&&analysis.intents.every(i=>i.kind==='note'))analysis.intents.push({kind:'explore',ideaId:currentIdea.id,agents:['Agent 3'],data:{canApply:true}});
     const note={id:uid(),text,createdAt:options.now,reply:'',agents:[1],ideaIds:[],taskIds:[],links:[],source:options.analysis?'model':'local-demo',...(options.analysis?{trace:clone(options.trace||[]),...(analysis.understanding?{understanding:clone(analysis.understanding)}:{}),...(options.usage?{usage:clone(options.usage)}:{}),...(options.requestId?{requestId:String(options.requestId).slice(0,150)}:{})}:{})};
     const replies=[],mapped=new Map(),handledPreferences=new Set();let clarification=analysis.clarification?.question||null,emotion='proud',mutated=false;
+    const keepPending=analysis.intents.some(i=>i.kind==='plan')&&!analysis.intents.some(i=>['schedule','busy','feedback'].includes(i.kind)&&i.data.canApply!==false);
     function linkIdea(intent){return state.ideas.find(i=>i.id===(intent.ideaId||mapped.get(intent.newIdeaKey)||context.lastIdeaId));}
+    function saveAdvice(idea,kind,value){
+      if(!options.analysis)return;
+      note.advice=note.advice||[];
+      const snapshot={ideaId:idea.id,kind,value:clone(value)},index=note.advice.findIndex(a=>a.ideaId===idea.id&&a.kind===kind);
+      if(index<0)note.advice.push(snapshot);else note.advice[index]=snapshot;
+    }
     for(const intent of analysis.intents||[]){
       const data={...(intent.data||{})};note.agents.push(...(intent.agents||[]).map(a=>Number(String(a).replace(/\D/g,''))).filter(n=>n>=1&&n<=4));
       if(data.canApply===false)continue;
       if(intent.kind==='idea'){
         const raw=data.text||intent.original||text,classed=options.analysis?{title:data.title||raw,type:data.type}:global.SparkEngine.classifyIdea(raw,data.type||'auto');
         const item={id:uid(),text:raw.slice(0,2000),title:String(data.title||classed.title||raw).slice(0,80),type:data.type||classed.type||'park',createdAt:options.now,archived:false,preferences:{...(options.preferences||{}),...Object.fromEntries(['energy','level','duration','goal'].filter(k=>data[k]!==undefined).map(k=>[k,data[k]]))}};
-        if(options.analysis&&item.type==='skill')item.aiPlan=contentFor(options,'plans',intent,item);
+        if(options.analysis&&item.type==='skill'){item.aiPlan=contentFor(options,'plans',intent,item);saveAdvice(item,'plan',item.aiPlan);}
         state.ideas.unshift(item);mapped.set(intent.newIdeaKey||data.newIdeaKey||'new-0',item.id);context.lastIdeaId=item.id;context.lastTaskId=null;note.ideaIds.push(item.id);mutated=true;
         replies.push('收下“'+item.title+'”啦。'+(item.type==='skill'?'学习安排员已经接住了，接着说你什么时候有空就好。':item.type==='creative'?'创意探索员来帮你找一个能试的小入口。':'先替你好好收着，想行动的时候继续说。'));
-        if(item.type==='creative'){item.exploration=options.analysis?contentFor(options,'explorations',intent,item):global.SparkEngine.exploreIdea({idea:item.text,timeBudget:10});replies.push('可以先试：'+String(item.exploration.firstStep?.title||item.exploration.firstStep));note.links.push({view:'lab',label:'已送到创意实验室',ideaId:item.id});note.agents.push(3);}else if(item.type==='skill'){note.agents.push(2);if(item.aiPlan)replies.push('下一小步：'+item.aiPlan.title+'。'+item.aiPlan.steps.map(s=>s.title+'：'+s.description).join(' '));}
+        if(item.type==='creative'){item.exploration=options.analysis?contentFor(options,'explorations',intent,item):global.SparkEngine.exploreIdea({idea:item.text,timeBudget:10});saveAdvice(item,'exploration',item.exploration);replies.push('可以先试：'+String(item.exploration.firstStep?.title||item.exploration.firstStep));note.links.push({view:'lab',label:'已送到创意实验室',ideaId:item.id});note.agents.push(3);}else if(item.type==='skill'){note.agents.push(2);if(item.aiPlan)replies.push('下一小步：'+item.aiPlan.title+'。'+item.aiPlan.steps.map(s=>s.title+'：'+s.description).join(' '));}
+      }else if(intent.kind==='plan'){
+        const idea=linkIdea(intent);if(!idea)continue;
+        if(!options.analysis)throw Error('本次行动建议需要完整的模型结果，记录尚未改动。');
+        const creative=idea.type==='creative',value=contentFor(options,creative?'explorations':'plans',intent,idea);
+        if(creative)idea.exploration=value;else idea.aiPlan=value;
+        saveAdvice(idea,creative?'exploration':'plan',value);context.lastIdeaId=idea.id;note.ideaIds.push(idea.id);note.agents.push(creative?3:2);mutated=true;
+        replies.push('已更新“'+idea.title+'”的本次建议：'+(creative?value.firstStep.title+'：'+value.firstStep.description:value.title+'。'+value.steps.map(s=>s.title+'：'+s.description).join(' '))+'。这次只更新建议，没有预约时间。');
       }else if(intent.kind==='preference'){
         const idea=linkIdea(intent);if(!idea||handledPreferences.has(idea.id))continue;handledPreferences.add(idea.id);
-        if(options.analysis&&idea.type!=='creative')idea.aiPlan=contentFor(options,'plans',intent,idea);
+        if(options.analysis&&idea.type!=='creative'){idea.aiPlan=contentFor(options,'plans',intent,idea);saveAdvice(idea,'plan',idea.aiPlan);}
         for(const preference of analysis.intents.filter(i=>i.kind==='preference'&&i.data?.canApply!==false&&linkIdea(i)?.id===idea.id))Object.assign(data,preference.data);
         idea.preferences={...(idea.preferences||{}),...data};context.lastIdeaId=idea.id;note.ideaIds.push(idea.id);note.agents.push(2);mutated=true;
         if(data.pause)replies.push('先把这个喜欢放一放，原记录和收获都留着。已有时间安排暂未改动，想改时间也可以接着说。');
@@ -199,12 +214,12 @@
         state.feedback.push(feedback);task.status=reported;context.lastIdeaId=task.ideaId;context.lastTaskId=task.id;context.pending=null;note.ideaIds.push(task.ideaId);note.taskIds.push(task.id);emotion=result.emotion;mutated=true;
         replies.push(result.response+' 下一次：'+result.nextAdjustment.advice);note.links.push({view:'feedback',label:'已留下成长反馈',taskId:task.id,ideaId:task.ideaId});
       }else if(intent.kind==='explore'){
-        const idea=linkIdea(intent);if(!idea)continue;idea.exploration=options.analysis?contentFor(options,'explorations',intent,idea):global.SparkEngine.exploreIdea({idea:idea.text+'。补充：'+text,timeBudget:idea.preferences?.duration||10,resources:data.resources||'',feedback:latest(state,idea.id)});note.agents.push(3);note.ideaIds.push(idea.id);mutated=true;replies.push('继续想一想：'+String(idea.exploration.firstStep?.title||idea.exploration.firstStep));note.links.push({view:'lab',label:'探索路径已更新',ideaId:idea.id});
+        const idea=linkIdea(intent);if(!idea)continue;idea.exploration=options.analysis?contentFor(options,'explorations',intent,idea):global.SparkEngine.exploreIdea({idea:idea.text+'。补充：'+text,timeBudget:idea.preferences?.duration||10,resources:data.resources||'',feedback:latest(state,idea.id)});saveAdvice(idea,'exploration',idea.exploration);note.agents.push(3);note.ideaIds.push(idea.id);mutated=true;replies.push('继续想一想：'+String(idea.exploration.firstStep?.title||idea.exploration.firstStep));note.links.push({view:'lab',label:'探索路径已更新',ideaId:idea.id});
       }
     }
     if(analysis.clarification?.pending){context.pending=clone(analysis.clarification.pending);const intent=context.pending.intent;if(intent.newIdeaKey&&mapped.has(intent.newIdeaKey)){intent.ideaId=mapped.get(intent.newIdeaKey);delete intent.newIdeaKey;}}
     if(clarification){note.clarification=clarification;replies.push(clarification);if(!context.pending)context.pending={kind:'note',question:clarification};emotion='thinking';}
-    else {context.pending=null;if(!replies.length)replies.push('这句碎碎念也收好了。你可以接着说想学什么、什么时候有空，或今天的小进展。');}
+    else {if(!keepPending)context.pending=null;if(!replies.length)replies.push('这句碎碎念也收好了。你可以接着说想学什么、什么时候有空，或今天的小进展。');}
     note.reply=replies.join('\n\n');note.agents=[...new Set(note.agents)].sort();note.ideaIds=[...new Set(note.ideaIds)];note.taskIds=[...new Set(note.taskIds)];note.emotion=emotion;note.changed=mutated;
     if(options.analysis){
       const after=domain(state),addTrace=(agent,tool,detail,status='success')=>note.trace.push({agent,kind:'tool',tool,action:detail,status,at:options.now,durationMs:0,source:'local-state'});

@@ -8,7 +8,7 @@ function fixture(){
   const context={console,Date,Intl,crypto:{randomUUID:()=>`client-${++serial}`}};context.window=context;
   vm.createContext(context);
   for(const file of ['engine.js','ramble.js','pocket.js','studio-core.js'])vm.runInContext(fs.readFileSync(path.join(__dirname,'../web',file),'utf8'),context,{filename:file});
-  return {app:context.HaipiguaCore.create(storage,()=>new Date(NOW)),values};
+  return {app:context.HaipiguaCore.create(storage,()=>new Date(NOW)),values,context,storage};
 }
 function plan(){return {title:'写一份实习作品清单',steps:[{title:'盘点已有经验',description:'写出本次比赛中亲自完成的三个具体动作。'}],successCriterion:'保留三条可追问、有证据的经历。',rationale:'已有比赛实践，先整理可讨论的材料。',nextStep:'为其中一个动作补充前后对比。'};}
 function response(){return {source:'model',requestId:'mock-provider-turn',usage:{inputTokens:80,outputTokens:120},trace:[{agent:'Agent 1',kind:'model',model:'glm-4.7-flash',action:'理解原话',status:'ok',durationMs:10},{agent:'Agent 2',kind:'model',model:'glm-4.7-flash',action:'生成计划',status:'success',durationMs:14}],analysis:{intents:[{kind:'idea',newIdeaKey:'job',data:{text:'准备AI产品实习',title:'AI产品实习',type:'skill'}},{kind:'schedule',newIdeaKey:'job',data:{date:'2026-10-17',start:'15:00',duration:20}}]},content:{plans:{job:plan()}}};}
@@ -106,4 +106,49 @@ test('a verified feedback form retains an explicitly empty reason and its model 
   assert.equal(app.state.feedback[0].reason,'');assert.equal(note.beforeAfter.actual.reason,'');
   assert.equal(app.state.feedback[0].nextAdjustment.durationScale,.5);
   assert.equal(app.undo(note.id),true);assert.equal(app.state.feedback.length,0);assert.equal(app.state.tasks[0].status,'accepted');
+});
+
+test('advice snapshots survive browser save and reload without changing existing task agreements or defaults',async()=>{
+  const {app,context,storage}=fixture();
+  app.setMode('strict',{accepted:true,bugs:true});
+  await app.submitModel('准备实习，今天十五点试20分钟',async()=>response());
+  const original=copy({tasks:app.state.tasks,preferences:app.state.ideas[0].preferences,studio:app.state.studio}),ideaId=app.state.ideas[0].id;
+  app.state.chatContext.pending={field:'start',question:'旧行动改到几点？',intent:{kind:'schedule',ideaId,taskId:app.state.tasks[0].id,data:{date:'2026-10-17',start:'15:00',duration:20}}};
+  const pending=copy(app.state.chatContext.pending);app.save();
+  const revised={...plan(),title:'本次只写一张项目卡'};
+  const note=await app.submitModel('只改建议，每次10分钟，不预约',async()=>({source:'model',trace:response().trace,analysis:{intents:[{kind:'plan',ideaId,data:{duration:10}}]},content:{plans:{[ideaId]:revised}}}));
+  assert.deepEqual(copy({tasks:app.state.tasks,preferences:app.state.ideas[0].preferences,studio:app.state.studio}),original);
+  assert.deepEqual(copy(app.state.chatContext.pending),pending);assert.equal(context.HaipiguaCore.validate(copy(app.state)),true);
+  const reloaded=context.HaipiguaCore.create(storage,()=>new Date(NOW));
+  assert.equal(reloaded.storageError,'');assert.equal(reloaded.state.notes.find(n=>n.id===note.id).advice[0].value.title,revised.title);
+  assert.deepEqual(copy(reloaded.state.tasks),original.tasks);assert.deepEqual(copy(reloaded.state.chatContext.pending),pending);
+  for(const corrupt of [backup=>{backup.notes.at(-1).advice[0].ideaId='missing';},backup=>{backup.notes.at(-1).advice[0].kind='schedule';},backup=>{backup.notes.at(-1).advice[0].value.steps=[];},backup=>{backup.notes.at(-1).advice[0].value.nextStep='';}]){
+    const backup=copy(app.state);corrupt(backup);assert.equal(context.HaipiguaCore.validate(backup),false);
+  }
+});
+
+test('modelContext includes bounded detached prior advice while omitting nested resources, media and secrets',()=>{
+  const {app}=fixture(),task=appointment(app),marker='PRIVATE-ADVICE-METADATA';
+  app.state.ideas[0].aiPlan={...plan(),steps:[{title:'旧步骤',description:'旧说明',media:marker}],resources:[{label:marker,url:marker}],references:[{secret:marker}],apiKey:marker};
+  app.state.ideas.push({id:'creative-memory',text:'梦境展',title:'梦境展',type:'creative',preferences:{duration:10},exploration:{title:'原实验',assumptions:['待验证'],paths:[{title:'旧路径',description:'旧路径说明',media:marker}],firstStep:{title:'旧入口',description:'旧入口说明',apiKey:marker},successSignal:'留一张卡',questions:['还有什么未知？'],timeBudget:10,searchLinks:[{label:marker,url:marker}],media:marker}});
+  const before=app.exportData(),context=app.modelContext(),learning=context.ideas.find(i=>i.id===task.ideaId),creative=context.ideas.find(i=>i.id==='creative-memory');
+  assert.equal(learning.aiPlan.steps[0].description,'旧说明');assert.equal(creative.exploration.firstStep.title,'旧入口');
+  assert.equal(JSON.stringify(context).includes(marker),false);
+  assert.equal('resources' in learning.aiPlan,false);assert.equal('searchLinks' in creative.exploration,false);
+  learning.aiPlan.steps[0].description='不能改本机';creative.exploration.firstStep.title='也不能改本机';creative.exploration.assumptions[0]='不能改数组';
+  assert.equal(app.exportData(),before);
+  app.state.ideas[0].aiPlan.steps=Array.from({length:9},()=>({title:'题'.repeat(250),description:'述'.repeat(1000)}));
+  const bounded=app.modelContext().ideas.find(i=>i.id===task.ideaId).aiPlan;
+  assert.equal(bounded.steps.length,4);assert.equal(bounded.steps[0].title.length,100);assert.equal(bounded.steps[0].description.length,600);
+});
+
+test('creative advice snapshots validate their concrete first step and time budget on import',async()=>{
+  const {app,context,storage}=fixture();
+  const exploration={title:'一张梦境卡',assumptions:['色块能表达感受，待验证'],paths:[{title:'画卡',description:'画三个色块'}],firstStep:{title:'先画三个色块',description:'只画一张卡'},successSignal:'留下一张卡',questions:[],timeBudget:10};
+  await app.submitModel('想做梦境展，先给建议',async()=>({source:'model',trace:response().trace,analysis:{intents:[{kind:'idea',newIdeaKey:'dream',data:{text:'梦境展',title:'梦境展',type:'creative'}}]},content:{explorations:{dream:exploration}}}));
+  assert.equal(context.HaipiguaCore.validate(copy(app.state)),true);
+  assert.equal(context.HaipiguaCore.create(storage,()=>new Date(NOW)).state.notes[0].advice[0].kind,'exploration');
+  for(const corrupt of [value=>{value.firstStep.description='';},value=>{value.timeBudget=0;},value=>{value.paths=[];},value=>{value.source='local-demo';}]){
+    const backup=copy(app.state);corrupt(backup.notes[0].advice[0].value);assert.equal(context.HaipiguaCore.validate(backup),false);
+  }
 });
