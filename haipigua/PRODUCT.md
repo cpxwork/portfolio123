@@ -106,10 +106,10 @@ node scripts/verify-product.cjs --live
 
 ```powershell
 docker build -t haipigua .
-docker run --rm -p 8877:8877 --env-file .env haipigua
+docker run --rm -p 8877:8877 --env-file .env -e HOST=0.0.0.0 haipigua
 ```
 
-容器会监听 `0.0.0.0`，因此 Dockerfile 设了 `ALLOW_PUBLIC=1`。这只适合本机/受控内网；公网仍必须加反代鉴权与 TLS。
+容器内默认监听 `0.0.0.0`，但 `.env` 里的 `HOST=127.0.0.1` 会覆盖镜像默认值，所以上面的 `-e HOST=0.0.0.0` 不能省。Dockerfile 设了 `ALLOW_PUBLIC=1`。这只适合本机/受控内网；公网仍必须加反代鉴权与 TLS。
 
 ## 7. 常见错误
 
