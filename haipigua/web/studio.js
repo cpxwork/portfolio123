@@ -36,41 +36,66 @@
   function bubble(id, content, caption = '') {
     return `<div class="message speaker-${id}"><div class="speaker-art">${sprite(id)}</div><div class="bubble-wrap"><div class="speaker-label"><strong>${robots[id].name}</strong>${caption || robots[id].role}</div><div class="bubble">${content}</div></div></div>`;
   }
-  function feedbackBubble(feedback) {
+  function reviewDetails(review) {
+    const points = (items, title) => (items || []).length ? `<p><strong>${title}</strong></p><ul>${items.map(item => `<li>${text(item.point)} <span class="review-evidence">“${text(item.evidence)}”</span></li>`).join('')}</ul>` : '';
+    const missing = (review.missingEvidence || []).length ? `<p><strong>还缺的证据：</strong>${review.missingEvidence.map(text).join('；')}</p>` : '';
+    return `${review.summary && review.summary !== review.response ? `<p>${text(review.summary)}</p>` : ''}${points(review.progress, '有依据的进展')}${points(review.problems, '具体的卡点')}${review.hasArtifact === false ? '<p class="small">这次没有看到具体作品或内容，我不会据此判断你的水平，也不会给评分。</p>' : ''}${missing}${review.needsEvidence && review.question ? `<p class="review-question"><strong>回回想先问一句：</strong>${text(review.question)}</p>` : ''}${review.nextStep && !review.needsEvidence ? `<p><strong>下一步先这样试：</strong>${text(review.nextStep)}</p>` : ''}${review.media ? '<p class="small">视频已保存在本机 · 尚未分析</p>' : ''}${Number.isInteger(review.minutes) && review.minutes > 0 ? `<p class="small">你提到的投入：约 ${review.minutes} 分钟。时长只说明投入，不说明水平。</p>` : ''}`;
+  }
+  function reviewBubble(review) {
+    return bubble(4, `<p>${text(review.response)}</p>${reviewDetails(review)}`);
+  }
+  function feedbackBubble(feedback, review = null) {
     const reward = state().studio.rewards.find(r => r.feedbackId === feedback.id);
-    return `<p>${text(feedback.response)}</p><p><strong>下一次这样试：</strong>${text(feedback.nextAdjustment?.advice || '先告诉我下一次什么时候有空。')}</p>${reward ? `<p class="reward-receipt">✦ +${reward.points} 成长值 · 演示待核验<br><span>来自你的自报反馈，不能抵现或抵扣费用。</span></p>` : ''}${feedback.media ? `<p class="small">视频已保存在本机 · 尚未分析</p>${action('play-video', '看看这次的记录 ↗', feedback.media.id)}` : ''}`;
+    return `<p>${text(feedback.response)}</p><p><strong>下一次这样试：</strong>${text(feedback.nextAdjustment?.advice || '先告诉我下一次什么时候有空。')}</p>${review ? reviewDetails(review) : ''}${reward ? `<p class="reward-receipt">✦ +${reward.points} 成长值 · 演示待核验<br><span>来自你的自报反馈，不能抵现或抵扣费用。</span></p>` : ''}${feedback.media ? `<p class="small">视频已保存在本机 · 尚未分析</p>${action('play-video', '看看这次的记录 ↗', feedback.media.id)}` : ''}`;
+  }
+  function learningAdvice(note, tasks, learning) {
+    const savedPlans = (note.advice || []).filter(a => a.kind === 'plan');
+    const learningTasks = tasks.filter(t => t.kind !== 'experiment');
+    const suggestions = savedPlans.length ? savedPlans.map(a => ({title: state().ideas.find(i => i.id === a.ideaId)?.title, value: a.value})) : note.advice === undefined && note.source !== 'model' ? learning.map(i => ({title: i.title, value: i.aiPlan})) : [];
+    let line = learningTasks.length ? learningTasks.map(t => `<p><strong>${esc(t.title)}</strong><br><span class="time-sticker">${date(t.date)} ${esc(t.start)}—${esc(t.end)} · ${t.duration} 分钟</span></p><p>${text(t.description || '')}</p>${t.successCriterion ? `<p><strong>留下什么算有收获：</strong>${text(t.successCriterion)}</p>` : ''}${resources(t.resources)}${action('task-detail', '看看这一步 ↗', t.id)}`).join('<hr>') : suggestions.length ? suggestions.map(({title, value: p}) => p ? `<p><strong>${esc(p.title || title)}</strong></p><ol>${p.steps.map(s => `<li><strong>${esc(s.title)}</strong>：${text(s.description)}</li>`).join('')}</ol><p><strong>具体产出：</strong>${text(p.successCriterion)}</p><p class="small">为什么先做这一步：${text(p.rationale)}<br>这是本条消息的建议，没有预约时间。</p><p><strong>下一次从这里接着试：</strong>${text(p.nextStep)}</p>${resources(p.resources)}` : `<p>“${esc(title)}”我接住啦。日期和时间还没确定，我们先把下一小步问清楚。</p>`).join('<hr>') : note.source === 'model' && note.advice === undefined ? `<p>${text(note.reply)}</p>` : '<p>你的时间与偏好已经交给我处理。具体记录在上面的理解详情里；遇到撞期，我会先问你。</p>';
+    if (learningTasks.length) line += '<p class="small">这里展示当前保存的安排。教程按钮是搜索入口，还没有替你筛选或核验视频。</p>';
+    return line;
+  }
+  function creativeAdvice(note, creative) {
+    const savedExplorations = (note.advice || []).filter(a => a.kind === 'exploration');
+    const suggestions = savedExplorations.length ? savedExplorations.map(a => ({idea: state().ideas.find(i => i.id === a.ideaId), value: a.value, noteId: note.id})) : note.advice === undefined && note.source !== 'model' ? creative.map(i => ({idea: i, value: i.exploration || SparkEngine.exploreIdea({idea: i.text, timeBudget: 10})})) : [];
+    let line = suggestions.length ? suggestions.map(({idea: i, value: r, noteId}) => {
+      return `<p><strong>${esc(r.title || i?.title)}</strong></p><p>先试这一小步：${text(typeof r.firstStep === 'string' ? r.firstStep : r.firstStep?.title || '')}</p>${r.firstStep?.description ? `<p>${text(r.firstStep.description)}</p>` : ''}<p class="small">观察信号：${text(r.successSignal)}</p>${resources(r.searchLinks)}${action('continue', '接着聊这个脑洞 ↗', i?.id)}${action('explore-detail', '展开探索路径', i?.id, noteId)}`;
+    }).join('<hr>') : note.source === 'model' && note.advice === undefined ? `<p>${text(note.reply)}</p>` : '<p>我已经接到这个小实验的时间。先试最小的一步，结果交给回回，我们再一起改路径。</p>';
+    line += '<p class="small">这是待验证的探索方向，不代表已经查证可行。</p>';
+    return line;
   }
   function noteMessages(note) {
     if (note.undone) return bubble(1, '<p>原话还收着，刚才的自动改动已经撤销。你可以重新说一个安排。</p>');
     const ideas = (note.ideaIds || []).map(id => state().ideas.find(i => i.id === id)).filter(Boolean);
     const tasks = (note.taskIds || []).map(id => state().tasks.find(t => t.id === id)).filter(Boolean);
+    const reviews = (note.reviewIds || []).map(id => state().reviews.find(r => r.id === id)).filter(Boolean);
     const feedback = state().feedback.find(f => f.id === note.feedbackId) || [...state().feedback].reverse().find(f => note.agents.includes(4) && (note.taskIds || []).includes(f.taskId) && f.createdAt === note.createdAt);
-    if (feedback) {
-      return bubble(4, feedbackBubble(feedback) + modelReceipt(note)) + '<div class="route-line">回回把行动结果交回皮皮</div>' + bubble(1, `<p>收好了：${esc(feedback.taskTitle)}，${feedback.minutes} 分钟。下次安排会参考这条反馈，之前的喜欢也留着。</p><p class="small">你的解释是记录，不是性格定论。想换一个兴趣也可以继续说。</p>`, '接住反馈，准备下一轮');
-    }
     const learning = ideas.filter(i => i.type === 'skill'), creative = ideas.filter(i => i.type === 'creative');
-    const savedPlans = (note.advice || []).filter(a => a.kind === 'plan'), savedExplorations = (note.advice || []).filter(a => a.kind === 'exploration');
+    if (feedback) {
+      const review = reviews.find(r => r.taskId === feedback.taskId) || reviews[0] || null;
+      let result = bubble(4, feedbackBubble(feedback, review) + modelReceipt(note)) + '<div class="route-line">回回把行动结果交回皮皮</div>';
+      if (note.agents.includes(2)) result += '<div class="route-line">回回 → 滴答 · 把这次卡点变成下一步</div>' + bubble(2, learningAdvice(note, tasks, learning));
+      if (note.agents.includes(3)) result += '<div class="route-line">回回 → 啵啵 · 把这次发现变成小实验</div>' + bubble(3, creativeAdvice(note, creative));
+      result += bubble(1, `<p>收好了：${esc(feedback.taskTitle)}，${feedback.minutes} 分钟。下次安排会参考这条反馈，之前的喜欢也留着。</p><p class="small">你的解释是记录，不是性格定论。想换一个兴趣也可以继续说。</p>`, '接住反馈，准备下一轮');
+      return result;
+    }
+    if (reviews.length) {
+      let result = reviews.map(reviewBubble).join('');
+      if (note.reviewQuestion && !reviews.some(r => r.question === note.reviewQuestion)) result += bubble(4, `<p class="review-question"><strong>回回想先问一句：</strong>${text(note.reviewQuestion)}</p>`);
+      if (note.agents.includes(2)) result += '<div class="route-line">回回 → 滴答 · 把这次卡点变成下一步</div>' + bubble(2, learningAdvice(note, tasks, learning));
+      if (note.agents.includes(3)) result += '<div class="route-line">回回 → 啵啵 · 把这次发现变成小实验</div>' + bubble(3, creativeAdvice(note, creative));
+      result += bubble(1, '<p>原话和这次分析都收好了。下一步建议只更新了计划，没有替你预约时间；信息不够时回回会接着问。</p>' + modelReceipt(note), '接住反馈，准备下一轮');
+      return result;
+    }
     const understanding = note.understanding;
     let content = understanding?.goal ? `<p><strong>我听到的主要目标：</strong>${text(understanding.goal)}</p>${(understanding.facts || []).length ? `<p>你已经告诉我的：</p><ul>${understanding.facts.map(f => `<li>${text(f.text)}</li>`).join('')}</ul>` : ''}${(understanding.constraints || []).length ? `<p>安排时要顾及：</p><ul>${understanding.constraints.map(f => `<li>${text(f.text)}</li>`).join('')}</ul>` : ''}<p class="small">这是皮皮对原话的理解，可以直接纠正；不会自动变成永久确认记忆。</p>` : '<p>' + (ideas.length ? `这段话关联到 ${ideas.length} 个目标或兴趣。` : '这段原话已经收进口袋。') + (learning.length ? '学习与准备交给滴答，' : '') + (creative.length ? '脑洞交给啵啵，' : '') + '不用你逐个搬过去。</p>';
     if (note.clarification) content += `<p><strong>有一处想问清楚：</strong>${text(note.clarification)}</p>`;
     if (understanding?.acknowledgement) content = `<p>${text(understanding.acknowledgement)}</p>` + content;
     content += `<details><summary>看看这次怎样记录的</summary><p>${text(note.reply)}</p><p class="small">${note.source === 'model' ? '模型理解后，经过本地业务校验。理解有误时直接更正。' : '本地规则体验，没有调用模型。复杂表达可能漏分或分错。'}</p></details>` + modelReceipt(note);
     let result = bubble(1, content);
-    if (note.agents.includes(2)) {
-      const learningTasks = tasks.filter(t => t.kind !== 'experiment');
-      const suggestions = savedPlans.length ? savedPlans.map(a => ({title: state().ideas.find(i => i.id === a.ideaId)?.title, value: a.value})) : note.advice === undefined && note.source !== 'model' ? learning.map(i => ({title: i.title, value: i.aiPlan})) : [];
-      let line = learningTasks.length ? learningTasks.map(t => `<p><strong>${esc(t.title)}</strong><br><span class="time-sticker">${date(t.date)} ${esc(t.start)}—${esc(t.end)} · ${t.duration} 分钟</span></p><p>${text(t.description || '')}</p>${t.successCriterion ? `<p><strong>留下什么算有收获：</strong>${text(t.successCriterion)}</p>` : ''}${resources(t.resources)}${action('task-detail', '看看这一步 ↗', t.id)}`).join('<hr>') : suggestions.length ? suggestions.map(({title, value: p}) => p ? `<p><strong>${esc(p.title || title)}</strong></p><ol>${p.steps.map(s => `<li><strong>${esc(s.title)}</strong>：${text(s.description)}</li>`).join('')}</ol><p><strong>具体产出：</strong>${text(p.successCriterion)}</p><p class="small">为什么先做这一步：${text(p.rationale)}<br>这是本条消息的建议，没有预约时间。</p><p><strong>下一次从这里接着试：</strong>${text(p.nextStep)}</p>${resources(p.resources)}` : `<p>“${esc(title)}”我接住啦。日期和时间还没确定，我们先把下一小步问清楚。</p>`).join('<hr>') : note.source === 'model' && note.advice === undefined ? `<p>${text(note.reply)}</p>` : '<p>你的时间与偏好已经交给我处理。具体记录在上面的理解详情里；遇到撞期，我会先问你。</p>';
-      if (learningTasks.length) line += '<p class="small">这里展示当前保存的安排。教程按钮是搜索入口，还没有替你筛选或核验视频。</p>';
-      result += '<div class="route-line">皮皮 → 滴答 · 学习与时间</div>' + bubble(2, line);
-    }
-    if (note.agents.includes(3)) {
-      const suggestions = savedExplorations.length ? savedExplorations.map(a => ({idea: state().ideas.find(i => i.id === a.ideaId), value: a.value, noteId: note.id})) : note.advice === undefined && note.source !== 'model' ? creative.map(i => ({idea: i, value: i.exploration || SparkEngine.exploreIdea({idea: i.text, timeBudget: 10})})) : [];
-      let line = suggestions.length ? suggestions.map(({idea: i, value: r, noteId}) => {
-        return `<p><strong>${esc(r.title || i?.title)}</strong></p><p>先试这一小步：${text(typeof r.firstStep === 'string' ? r.firstStep : r.firstStep?.title || '')}</p>${r.firstStep?.description ? `<p>${text(r.firstStep.description)}</p>` : ''}<p class="small">观察信号：${text(r.successSignal)}</p>${resources(r.searchLinks)}${action('continue', '接着聊这个脑洞 ↗', i?.id)}${action('explore-detail', '展开探索路径', i?.id, noteId)}`;
-      }).join('<hr>') : note.source === 'model' && note.advice === undefined ? `<p>${text(note.reply)}</p>` : '<p>我已经接到这个小实验的时间。先试最小的一步，结果交给回回，我们再一起改路径。</p>';
-      line += '<p class="small">这是待验证的探索方向，不代表已经查证可行。</p>';
-      result += '<div class="route-line">皮皮 → 啵啵 · 创意与验证</div>' + bubble(3, line);
-    }
+    if (note.agents.includes(2)) result += '<div class="route-line">皮皮 → 滴答 · 学习与时间</div>' + bubble(2, learningAdvice(note, tasks, learning));
+    if (note.agents.includes(3)) result += '<div class="route-line">皮皮 → 啵啵 · 创意与验证</div>' + bubble(3, creativeAdvice(note, creative));
     if (tasks.length) result += '<div class="route-line">行动之后，把发现带回来</div>' + bubble(4, `<p>约定已经收下。做完、做了一部分，或者临时不想做，都可以告诉我。我会把真实情况带回下一轮。</p>${action('feedback', '现在带回一点反馈 ↗', tasks[0].id)}`);
     return result;
   }
@@ -91,6 +116,28 @@
     thread.innerHTML = html;
     thread.scrollTop = atBottom || !notes.length ? thread.scrollHeight : scroll;
   }
+  let stageNoteId=null,stageView=null;
+  function stageBody(node){
+    return `${node.previous?`<p class="speech-before">之前：${text(node.previous)}</p>`:''}${node.paragraphs.map(p=>`<p>${text(p)}</p>`).join('')}${node.bullets.length?`<ul>${node.bullets.map(p=>`<li>${text(p)}</li>`).join('')}</ul>`:''}`;
+  }
+  function renderStage(){
+    const note=state().notes.find(n=>n.id===stageNoteId)||state().notes.at(-1);
+    stageView=HaipiguaRelay.build(state(),note);
+    for(const id of [1,2,3,4]){
+      const node=stageView.nodes[id];
+      $('#relay-node-'+id).setAttribute('data-state',node.state);
+      $('#agent-speech-'+id).innerHTML=`<div class="speech-label"><strong>${esc(node.name)}</strong><span class="speech-status">${esc(node.status)}</span></div><div class="speech-body" tabindex="0" aria-label="${esc(node.name)}本轮说的话">${stageBody(node)}</div>${node.noteId?`<button class="speech-expand" data-action="stage-detail" data-id="${id}" data-note-id="${esc(node.noteId)}">展开这句话 ↗</button>`:''}`;
+    }
+    $('#relay-source').textContent=stageView.source==='model'?`模型回复 · ${stageView.calls.length} 次调用记录`:stageView.source==='local-demo'?'离线规则体验 · 未调用模型':'等你的一句话';
+    $('#relay-caption').textContent=stageView.caption;
+    $('#relay-original').hidden=!note;
+    $('#relay-original-summary').textContent=note?'你刚才说：'+note.text.slice(0,75)+(note.text.length>75?'…':''):'';
+    $('#relay-original-text').textContent=note?.text||'';
+    for(const from of [1,2,3,4])for(const to of [1,2,3,4]){
+      const path=$('#route-'+from+'-'+to);if(path)path.classList.toggle('active',stageView.edges.some(e=>e.from===from&&e.to===to));
+    }
+    $('#relay-return').hidden=!stageView.edges.some(e=>e.from===4&&e.to===1);
+  }
   function taskRows(tasks) {
     return tasks.length ? tasks.map(t => `<article class="task-row"><div class="task-clock">${esc(t.start)}<small>${date(t.date)} · ${t.duration} 分钟</small></div><div class="task-detail"><h3>${esc(t.title)}</h3><p>${t.kind === 'experiment' ? '啵啵的创意小实验' : '滴答的学习小行动'}${t.contract?.date === app.current().today && app.mode() === 'strict' ? ' · 今天的认真约定' : ''}</p></div>${t.status === 'accepted' ? `<button data-action="feedback" data-id="${esc(t.id)}">带回反馈 ↗</button>` : `<span class="task-status">${status(t.status)}</span>`}<button data-action="task-detail" data-id="${esc(t.id)}">详情</button></article>`).join('') : '<p class="empty">这里还有空白。直接在对话里说“明天中午十二点练十分钟”，就能给喜欢留一点时间。</p>';
   }
@@ -110,7 +157,7 @@
     $('#reward-strip').hidden = !reward;
     $('#reward-points').textContent = '✦ ' + state().studio.rewards.reduce((sum, r) => sum + r.points, 0) + ' 成长值';
     $('#task-count').textContent = state().tasks.filter(t => t.status === 'accepted').length;
-    renderThread(); renderAgenda(); renderMemory();
+    renderThread(); renderStage(); renderAgenda(); renderMemory();
   }
   function go(next, focus = false) {
     view = ['chat', 'agenda', 'memory'].includes(next) ? next : 'chat';
@@ -147,10 +194,28 @@
   }
   function showFeedback(id) {
     const tasks = state().tasks.filter(t => t.status === 'accepted');
-    if (!tasks.length) { go('chat', true); toast('先和滴答或啵啵约一个小行动，再把收获带回来。'); return; }
+    const ideas = state().ideas.filter(i => !i.archived && i.type !== 'park');
+    if (!tasks.length && !ideas.length) { go('chat', true); toast('先说说想学什么、想做什么，再来带回反馈。'); return; }
     setRobot(4);
-    const selected = tasks.find(t => t.id === id) || tasks.at(-1);
-    dialog('回回，今天是这样的……', `<form id="feedback-form"><div class="form-grid"><div class="field full"><label for="feedback-task">想聊哪一次小行动？</label><select id="feedback-task" name="taskId">${tasks.map(t => `<option value="${esc(t.id)}" ${t.id === selected.id ? 'selected' : ''}>${date(t.date)} ${esc(t.title)}</option>`).join('')}</select></div><div class="field"><label for="completion">完成情况</label><select id="completion" name="completion"><option value="done">做完啦</option><option value="partial">试了一部分</option><option value="skipped">今天暂时没做</option></select></div><div class="field"><label for="spent">实际用了多久？</label><input id="spent" name="minutes" type="number" min="0" max="480" step="1" value="${selected.duration}" required></div><div class="field full"><label for="feeling">这次感觉怎么样？</label><select id="feeling" name="feeling"><option value="right">刚刚好</option><option value="hard">有点难，下次拆小一点</option><option value="easy">挺轻松，可以进一点点</option></select></div><div class="field full"><label for="reason">发现了什么，或者发生了什么？</label><textarea id="reason" name="reason" maxlength="2000" placeholder="比如：动作衔接有点难；今天临时加班；这个兴趣好像没那么喜欢了……"></textarea></div><div class="field full"><label for="feedback-video">也可以带一段视频（选填，25 MB 以内）</label><input id="feedback-video" name="video" type="file" accept="video/*"><video class="video-preview" id="feedback-preview" controls playsinline hidden></video><p class="hint" id="video-status">视频仅保存在本机。当前没有视频分析服务，回回会依据你的文字反馈调整，不会假装看懂视频。</p></div></div><div class="actions"><button class="primary" type="submit" id="feedback-submit">把收获交给回回 ↗</button><button type="button" class="secondary" data-action="close">再想一会儿</button></div></form>`);
+    const selectedTask = tasks.find(t => t.id === id) || tasks.at(-1);
+    const selectedIdea = ideas.find(i => i.id === id) || ideas.at(-1);
+    const selectedTarget = selectedTask ? 'task:' + selectedTask.id : 'idea:' + selectedIdea.id;
+    const selectedMinutes = selectedTask?.duration || selectedIdea?.preferences?.duration || 10;
+    const options = [
+      ...tasks.map(t => `<option value="task:${esc(t.id)}" ${'task:' + t.id === selectedTarget ? 'selected' : ''}>${date(t.date)} ${esc(t.title)} · 已预约</option>`),
+      ...ideas.map(i => `<option value="idea:${esc(i.id)}" ${'idea:' + i.id === selectedTarget ? 'selected' : ''}>${esc(i.title)} · 未预约，按兴趣反馈</option>`)
+    ];
+    const draft = $('#composer').value.trim();
+    dialog('回回，今天是这样的……', `<form id="feedback-form"><div class="form-grid"><div class="field full"><label for="feedback-target">想聊哪一次？</label><select id="feedback-target" name="target">${options.join('')}</select><p class="hint" id="feedback-target-hint">已预约行动会记录完成情况；未预约兴趣只分析这次经历，不改任何旧任务。</p></div><div class="field"><label for="completion">这次做到哪一步？</label><select id="completion" name="completion"><option value="done">做完啦</option><option value="partial">试了一部分</option><option value="skipped">今天暂时没做</option></select></div><div class="field"><label for="spent">实际用了多久？</label><input id="spent" name="minutes" type="number" min="0" max="480" step="1" value="${Number(selectedMinutes) || 10}"><p class="hint">未预约反馈可以留空；留空就是不记录时长，不会替你编一个。</p></div><div class="field full"><label for="feeling">这次感觉怎么样？</label><select id="feeling" name="feeling"><option value="right">刚刚好</option><option value="hard">有点难，下次拆小一点</option><option value="easy">挺轻松，可以进一点点</option></select></div><div class="field full"><label for="reason">发现了什么，或者发生了什么？</label><textarea id="reason" name="reason" maxlength="2000" placeholder="比如：动作衔接有点难；排线好难；今天临时加班；这个兴趣好像没那么喜欢了……">${esc(draft)}</textarea><p class="hint">如果选择和文字不一致，回回会两条都保留：比如“总体挺轻松，但排线好难”。</p></div><div class="field full"><label for="feedback-video">也可以带一段视频（选填，25 MB 以内）</label><input id="feedback-video" name="video" type="file" accept="video/*"><video class="video-preview" id="feedback-preview" controls playsinline hidden></video><p class="hint" id="video-status">视频仅保存在本机。当前没有视频分析服务，回回会依据你的文字反馈调整，不会假装看懂视频。</p></div></div><div class="actions"><button class="primary" type="submit" id="feedback-submit">把收获交给回回 ↗</button><button type="button" class="secondary" data-action="close">再想一会儿</button></div></form>`);
+    syncFeedbackTarget();
+  }
+  function syncFeedbackTarget() {
+    const select = $('#feedback-target'); if (!select) return;
+    const isTask = String(select.value || '').startsWith('task:');
+    const spent = $('#spent');
+    if (spent) { spent.required = isTask; spent.placeholder = isTask ? '请填写实际时长' : '可以留空，表示未记录时长'; }
+    const hint = $('#feedback-target-hint');
+    if (hint) hint.textContent = isTask ? '已预约行动会记录完成情况；时长必须如实填写。' : '未预约兴趣只分析这次经历，不改任何旧任务；时长可以留空。';
   }
   function clearBugs(snooze = true) {
     clearTimeout(bugTimer); $('#bugs-layer').replaceChildren(); $('#bug-controls').hidden = true;
@@ -181,8 +246,22 @@
     if (sending || feedbackPending) return;
     if (recording) { toast('先结束语音并确认文字，再交给回回。'); return; }
     const data = Object.fromEntries(new FormData(form));
-    data.minutes = data.completion === 'skipped' ? 0 : Number(data.minutes);
-    data.reason = String(data.reason || '').trim();
+    const target = String(data.target || '');
+    const isTask = target.startsWith('task:'), targetId = target.slice(5);
+    const task = isTask ? state().tasks.find(t => t.id === targetId && t.status === 'accepted') : null;
+    const idea = !isTask ? state().ideas.find(i => i.id === targetId) : null;
+    if (isTask && !task) { toast('这次行动已经反馈过，请重新选择。', true); return; }
+    if (!isTask && !idea) { toast('没有找到这个兴趣，请重新选择。', true); return; }
+    const minutes = data.completion === 'skipped' ? 0 : data.minutes === '' || data.minutes === undefined ? null : Number(data.minutes);
+    if (isTask && (!Number.isInteger(minutes) || minutes < 0 || minutes > 480)) { toast('已预约行动请填写 0—480 的实际分钟数。', true); return; }
+    if (!isTask && minutes !== null && (!Number.isInteger(minutes) || minutes < 0 || minutes > 480)) { toast('实际时长请填写 0—480 的整数，或留空。', true); return; }
+    if (!isTask && !useModel) { toast('未预约的兴趣反馈需要真实模型分析；请先切到真实模型，或把这个兴趣预约成小行动。', true); return; }
+    const reason = String(data.reason || '').trim();
+    const completionLabel = ({done: '完成了', partial: '做了一部分', skipped: '暂时没做'}[data.completion]);
+    const feelingLabel = ({right: '刚好', hard: '有点难', easy: '挺轻松'}[data.feeling]);
+    const raw = isTask
+      ? `关于“${task.title}”（${task.date} ${task.start}）的行动反馈：${completionLabel}，实际${minutes}分钟，难度${feelingLabel}。${reason}`
+      : `关于“${idea.title}”的未预约兴趣反馈：这次${completionLabel}，实际${minutes === null ? '未记录时长' : minutes + '分钟'}，难度${feelingLabel}。${reason}`;
     const button = $('#feedback-submit'), modelForThisFeedback = useModel;
     const controls = [...form.elements, ...$('#dialog').querySelectorAll('[data-action="close"]')].map(control => ({control, disabled: control.disabled}));
     feedbackPending = true; setSending(true); form.setAttribute('aria-busy', 'true');
@@ -192,15 +271,22 @@
       let media = null;
       if (pendingVideo) media = await app.putMedia(app.uid(), pendingVideo);
       if (modelForThisFeedback) {
-        const task = state().tasks.find(t => t.id === data.taskId);
-        const raw = `关于“${task.title}”（${task.date} ${task.start}）的行动反馈：${({done: '完成了', partial: '做了一部分', skipped: '暂时没做'}[data.completion])}，实际${data.completion === 'skipped' ? 0 : data.minutes}分钟，难度${({right: '刚好', hard: '有点难', easy: '挺轻松'}[data.feeling])}。${data.reason || ''}`;
-        const note = await app.submitModel(raw, HaipiguaModel.turn, data.taskId, {expectedFeedback: {completion: data.completion, minutes: data.minutes, feeling: data.feeling, reason: data.reason}});
-        const feedback = [...state().feedback].reverse().find(f => f.taskId === data.taskId && f.createdAt === note.createdAt);
-        if (feedback && media) { feedback.media = media; app.save(); }
+        const note = isTask
+          ? await app.submitModel(raw, HaipiguaModel.turn, task.id, {expectedFeedback: {completion: data.completion, minutes, feeling: data.feeling, reason}})
+          : await app.submitModel(raw, HaipiguaModel.turn, null, {expectedReview: {ideaId: idea.id, completion: data.completion, minutes, feeling: data.feeling, reason}});
+        if (isTask) {
+          const feedback = [...state().feedback].reverse().find(f => f.taskId === task.id && f.createdAt === note.createdAt);
+          if (feedback && media) { feedback.media = media; app.save(); }
+        } else if (media) {
+          const review = [...state().reviews].reverse().find(r => r.noteId === note.id);
+          if (review) { review.media = media; app.save(); }
+        }
         modelValidated = true;
-      } else app.feedback({...data, media});
+      } else {
+        app.feedback({taskId: task.id, completion: data.completion, minutes, feeling: data.feeling, reason, media});
+      }
       feedbackPending = false;
-      close(); clearBugs(false); render(); go('chat'); bottom(); saveNotice(); updateConnection(); setRobot(4, '谢谢你告诉我真实情况，下一次我们一起调小一点。');
+      stageNoteId=null; close(); clearBugs(false); render(); go('chat'); bottom(); saveNotice(); updateConnection(); setRobot(4, '谢谢你告诉我真实情况。下一步只更新建议，不会替你预约时间。');
     } catch (error) { toast(error.message, true); }
     finally {
       feedbackPending = false; setSending(false); form.removeAttribute('aria-busy');
@@ -208,17 +294,18 @@
       if (button.isConnected) button.textContent = '把收获交给回回 ↗';
     }
   }
-  function setSending(value) { sending = value; $('#dictate').disabled = value; }
+  function setSending(value) { sending = value; $('#dictate').disabled = value; $('#relay-request-status').hidden=!value; $('#relay-request-status').textContent=value?'正在处理这段话，收到完整结果后会更新头顶对话。':''; }
   function showFact(id, initial = '') {
     const existing = state().studio.facts.find(f => f.id === id);
     dialog(existing ? '这条记忆，我想改一改' : '皮皮，记住这一件小事', `<p class="hint">只记录你确认的内容。你可以随时修改、忘掉它。</p><form id="fact-form" data-id="${esc(existing?.id || '')}"><div class="field"><label for="fact-text">安排时，你希望我们知道什么？</label><textarea id="fact-text" name="text" maxlength="300" required>${esc(existing?.text || initial)}</textarea></div><div class="actions"><button type="submit" class="primary">确认记住</button><button type="button" class="secondary" data-action="close">先不记</button></div></form>`);
   }
   function capabilities() {
-    dialog('现在的嗨皮瓜，会做些什么？', '<p>本地体验使用规则分流；GLM模式通过本机服务调用免费文本模型：皮皮理解并分流，滴答规划，啵啵探索，回回反馈。每轮只调用需要的角色，不为凑四次调用而浪费时间。</p><p>模型负责理解和建议；任务关联、日期、撞期与本机保存仍由代码校验。每条模型回复可以展开实际调用记录。失败会提示，不会偷偷换成本地规则并冒充模型。</p><p>模型模式发送本次文字和近期相关记录到智谱。密钥仅在本机服务内存，不进浏览器或仓库；文字记录仍保存在你的浏览器，没有跨设备数据库。</p><p>语音转写依赖浏览器。视频仅本机回看，当前文本模型不会看视频。搜索入口不代表已核验教程，官方资料只有显示本次已读取时才表示实际读取。</p>');
+    dialog('现在的嗨皮瓜，会做些什么？', '<p>本地体验使用规则分流；真实模型模式通过本机服务调用你明确选择的平台与型号：皮皮理解并分流，滴答规划，啵啵探索，回回反馈。每轮只调用需要的角色，不为凑四次调用而浪费时间。</p><p>模型负责理解和建议；任务关联、日期、撞期、反馈依据与本机保存仍由代码校验。每条模型回复可以展开实际调用记录。失败会提示，不会偷偷换成本地规则并冒充模型。</p><p>模型模式发送本次文字和近期相关记录到所选平台。密钥仅在本机服务内存，不进浏览器或仓库；文字记录仍保存在你的浏览器，没有跨设备数据库。</p><p>语音转写依赖浏览器。视频仅本机回看，当前文本模型不会看视频。搜索入口不代表已核验教程，官方资料只有显示本次已读取时才表示实际读取。费用以平台账单为准。</p>');
   }
   function updateConnection() {
-    const name = modelHealth.model === 'glm-4-flash-250414' ? 'GLM-4-Flash · 免费备用' : 'GLM-4.7-Flash';
-    $('#connection-button').textContent = useModel ? name + (modelValidated ? ' · 已真实调用' : ' · 服务已配置') : '本地规则体验 · 未调用模型';
+    const provider = modelHealth.providerLabel || modelHealth.provider || '模型服务';
+    const name = modelHealth.modelLabel || modelHealth.model || '未检测到型号';
+    $('#connection-button').textContent = useModel ? provider + ' · ' + name + (modelValidated ? ' · 已真实调用' : ' · 服务已配置') : '本地规则体验 · 未调用模型';
     $('#connection-dot').style.background = useModel ? '#6b9d77' : '#a6ad99';
   }
   async function refreshConnection(initial = false) {
@@ -227,7 +314,11 @@
     updateConnection(); return modelHealth;
   }
   function showConnection() {
-    dialog('这段对话，由谁来接住？', `<p><strong>${modelHealth.ready ? '本机模型服务已配置' : '本机模型服务尚未就绪'}</strong></p><p>当前配置：${esc(modelHealth.model || '未检测到')}。只允许官方免费文本型号，切换会明确显示，不会转到收费模型。</p><p>GLM 模式会把本次文字与近期相关记录发送到智谱，按职责调用模型，再校验并保存。本地体验使用演示规则，两种来源逐条标清。</p><div class="actions">${modelHealth.ready ? '<button class="primary" data-action="model-on">使用真实 GLM</button>' : ''}<button class="secondary" data-action="model-recheck">重新检测本机服务</button><button class="secondary" data-action="model-off">使用本地体验</button></div><p class="hint">密钥不要填在碎碎念里。启动方法见仓库的 server/README.md；当前服务地址只在本机有效，不等于腾讯云已接通。</p>`);
+    const provider = modelHealth.providerLabel || modelHealth.provider || '未检测到';
+    const model = modelHealth.modelLabel || modelHealth.model || '未检测到';
+    const price = modelHealth.price ? `输入 ${modelHealth.price.input?.join('–')} / 输出 ${modelHealth.price.output?.join('–')} ${modelHealth.price.currency || ''}` : '平台未返回价格';
+    const budget = modelHealth.budget?.limitCny != null ? `本次本机服务估算预算 ¥${modelHealth.budget.limitCny}，已估算 ¥${modelHealth.budget.estimatedSpentCny ?? 0}；不是账单。` : '未设置本机估算预算上限；仍受每轮调用次数和每次启动对话段数限制。';
+    dialog('这段对话，由谁来接住？', `<p><strong>${modelHealth.ready ? '本机模型服务已配置' : '本机模型服务尚未就绪'}</strong></p><p>当前配置：${esc(provider)} · ${esc(model)}。</p><p>模型价格：${esc(price)}。${esc(modelHealth.priceNote || '')}</p><p>${esc(budget)}</p><p>模型模式会把本次文字与近期相关记录发送到所选平台，按职责调用模型，再校验并保存。本地体验使用演示规则，两种来源逐条标清。密钥只在本机服务进程里，不会进入浏览器或仓库。</p><div class="actions">${modelHealth.ready ? '<button class="primary" data-action="model-on">使用真实模型</button>' : ''}<button class="secondary" data-action="model-recheck">重新检测本机服务</button><button class="secondary" data-action="model-off">使用本地体验</button></div><p class="hint">启动方法见仓库的 server/README.md；当前服务地址只在本机有效，不等于腾讯云已接通。真实费用以平台账单为准。</p>`);
   }
   document.addEventListener('click', async event => {
     const button = event.target.closest('button');
@@ -242,11 +333,18 @@
     }
     try {
       if (name === 'close') close();
+      else if(name==='history'){$('#conversation-log').open=!$('#conversation-log').open;if($('#conversation-log').open)$('#conversation-log').scrollIntoView?.({behavior:'smooth',block:'start'});}
+      else if(name==='stage-detail'){
+        const n=state().notes.find(n=>n.id===noteId),node=HaipiguaRelay.build(state(),n).nodes[Number(id)];if(!n||!node)return;
+        dialog(node.name+' · '+node.status,`<div class="stage-detail">${stageBody(node)}${resources(node.links)}</div><p class="hint">${n.source==='model'?'本条模型结果':'本地规则体验，未调用模型'} · ${esc(n.text.slice(0,120))}</p>`);
+      }
+      else if(name==='stage-turn'){stageNoteId=id;renderStage();go('chat');$('#character-stage').scrollIntoView?.({behavior:'smooth',block:'start'});}
+
       else if (name === 'mode') showMode();
       else if (name === 'rewards') showRewards();
       else if (name === 'capabilities') capabilities();
       else if (name === 'model-connection') showConnection();
-      else if (name === 'model-on') { useModel = true; close(); updateConnection(); toast('已切到真实 GLM，下一条发送会调用模型。'); }
+      else if (name === 'model-on') { useModel = true; close(); updateConnection(); toast('已切到真实模型，下一条发送会调用所选平台。'); }
       else if (name === 'model-off') { useModel = false; close(); updateConnection(); toast('已切到本地规则体验。'); }
       else if (name === 'model-recheck') { await refreshConnection(); showConnection(); }
       else if (name === 'bottom') bottom();
@@ -288,13 +386,14 @@
     button.disabled = true; $('#composer').readOnly = true;
     message.hidden = !useModel; message.classList.remove('error'); message.textContent = '皮皮和朋友们正在理解这一段。只调用需要的角色，可能要等几十秒……';
     try {
-      const note = modelForThisTurn ? await app.submitModel(submittedDraft, HaipiguaModel.turn) : app.submit(submittedDraft); if (!note) return;
+      const note = modelForThisTurn ? await app.submitModel(submittedDraft, HaipiguaModel.turn) : app.submit(submittedDraft); if (!note) return; stageNoteId=null;
       if (modelForThisTurn) modelValidated = true;
       if ($('#composer').value === submittedDraft) { $('#composer').value = ''; $('#composer').dispatchEvent(new Event('input')); }
       render(); bottom(); saveNotice();
       message.hidden = true; updateConnection();
       setRobot(note.agents.includes(4) ? 4 : note.agents.includes(3) ? 3 : note.agents.includes(2) ? 2 : 1);
       if (note.clarification) toast('有一处需要你补充，看皮皮的追问。');
+      else if (note.reviewQuestion) toast('回回想先问一句，看看它的追问。');
     } catch (error) { message.hidden = false; message.classList.add('error'); message.textContent = error.message + ' 原文还在输入框，检查后可再发送。'; toast(error.message, true); }
     finally { setSending(false); button.disabled = false; $('#composer').readOnly = false; }
   });
@@ -314,6 +413,7 @@
   });
   document.addEventListener('change', event => {
     if (event.target.name === 'mode') { const consent = $('#mode-form input[name=accepted]'); if (consent) consent.required = event.target.value !== 'gentle'; }
+    if (event.target.id === 'feedback-target') syncFeedbackTarget();
     if (event.target.id === 'completion') {
       const skipped = event.target.value === 'skipped'; $('#spent').disabled = skipped;
       if (skipped) $('#spent').value = 0;

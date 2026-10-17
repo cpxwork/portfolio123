@@ -10,7 +10,7 @@ function fixture(){
   let serial=0;const saved=new Map(),storage={getItem:key=>saved.get(key)||null,setItem:(key,value)=>saved.set(key,value)};
   const context={console,Date,Intl,crypto:{randomUUID:()=>`view-${++serial}`},localStorage:storage};context.window=context;
   vm.createContext(context);
-  for(const name of ['engine.js','ramble.js','pocket.js','studio-core.js'])vm.runInContext(fs.readFileSync(path.join(__dirname,'../web',name),'utf8'),context,{filename:name});
+  for(const name of ['engine.js','ramble.js','pocket.js','studio-core.js','relay-view.js'])vm.runInContext(fs.readFileSync(path.join(__dirname,'../web',name),'utf8'),context,{filename:name});
   const app=context.HaipiguaCore.create(storage,()=>new Date(NOW));
   function turn(raw,intents,content){return app.submit(raw,{source:'model',trace,analysis:{intents},content});}
   function render(){
@@ -61,4 +61,17 @@ test('legacy model messages without snapshots show only their saved reply instea
     assert.match(legacy,/LEGACY-SUGGESTION/);assert.doesNotMatch(legacy,/CURRENT-SUGGESTION/);
     assert.doesNotMatch(legacy,/data-action="explore-detail"/,'an absent historical snapshot cannot expand the latest exploration as old advice');
   }
+});
+
+test('a review message renders its evidence, honesty note, and same-turn planner handoff without a score',()=>{
+  const {app,turn,render}=fixture();
+  turn('REVIEW-SEED',[{kind:'idea',newIdeaKey:'draw',data:{text:'画画',title:'画画',type:'skill'}}],{plans:{draw:plan('SEED-PLAN')}});
+  const id=app.state.ideas[0].id;
+  const review={source:'model',ideaId:id,response:'你练了排线，也看到了线条抖。',summary:'画了两张排线，线条还是抖。',progress:[{point:'画了两张',evidence:'画了两张'}],problems:[{point:'线条还是抖',evidence:'线条还是抖'}],missingEvidence:['没有看到画，无法判断抖动的具体原因'],hasArtifact:false,needsEvidence:false,question:'',nextStep:'只画两组短线，固定方向与间距。',durationScale:.8,difficulty:'easier',emotion:'thinking',advice:'先固定方向。',taskId:null,minutes:null,fromForm:false};
+  turn('REVIEW-RAW',[{kind:'review',ideaId:id,data:{canApply:true}},{kind:'plan',ideaId:id,data:{duration:8}}],{reviews:{[id]:review},plans:{[id]:plan('AFTER-REVIEW-PLAN')}});
+  const {html}=render(),section=html.slice(html.indexOf('REVIEW-RAW'));
+  assert.match(section,/你练了排线/);assert.match(section,/画了两张/);assert.match(section,/线条还是抖/);
+  assert.match(section,/没有看到具体作品或内容/);assert.match(section,/回回 → 滴答/);assert.match(section,/AFTER-REVIEW-PLAN/);
+  assert.match(section,/没有预约时间/);assert.doesNotMatch(section,/评分[:：]\s*\d/);
+  assert.equal(app.state.reviews.length,1);assert.equal(app.state.tasks.length,0);
 });

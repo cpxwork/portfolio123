@@ -2,39 +2,64 @@
 
 这是可运行的本机服务，不是腾讯云已部署的后端。Node.js 20 或更高，无额外 npm 依赖；监听 `127.0.0.1:8878`。前端预览在 `127.0.0.1:8877`，由预览服务器将 `/api/health`、`/api/agent` 同源反向代理到本服务。
 
+2026-10-17 起支持显式选择两个平台：
+
+| 平台 | 固定聊天地址 | 允许的型号（本仓库白名单） |
+| --- | --- | --- |
+| AI Ping | `https://aiping.cn/api/v1/chat/completions` | `GLM-4.7-Flash`（默认）、`GLM-5.3-Flash`、`Qwen3.5-Flash`、`DeepSeek-V4-Flash`、`DeepSeek-V4.1-Flash`、`Step-3.5-Flash` |
+| 智谱 GLM | `https://open.bigmodel.cn/api/paas/v4/chat/completions` | `glm-4.7-flash`、`glm-4-flash-250414`（免费） |
+
+平台、地址和型号必须同时明确；只换 Key 不会切换平台，也不允许自定义地址。AI Ping 型号 ID 区分大小写。价格快照与允许列表在 `server/providers.cjs`，实际费用以平台账单为准；本服务不会自动切到未列出的或更贵的型号。
+
 ## 启动
 
-在 `haipigua` 目录用 PowerShell 执行：
+在 `haipigua` 目录用 PowerShell 执行。默认明确选择 AI Ping 与 `GLM-4.7-Flash`：
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\server\start-local.ps1
 ```
 
-这个交互启动脚本默认明确选择 `glm-4-flash-250414`。2026-10-17 本机联调时 `glm-4.7-flash` 返回1305模型访问量过大；同一账户对前者的小请求成功，因此演示先选择这个官方列出的免费文字模型。要选择4.7，可执行 `powershell -ExecutionPolicy Bypass -File .\server\start-local.ps1 -ModelName glm-4.7-flash`。服务不会隐藏地自动切换型号。
+选择其他允许型号或平台：
 
-按提示输入自己的智谱 API Key，输入使用 PowerShell 隐藏输入。秘密经子进程标准输入传递，保留在进程内存；不写配置文件、仓库、浏览器存储、命令行参数或日志。关闭进程后，下一次启动需重新输入。不要把真实密钥写进脚本或测试。
+```powershell
+powershell -ExecutionPolicy Bypass -File .\server\start-local.ps1 -Provider aiping -ModelName GLM-5.3-Flash
+powershell -ExecutionPolicy Bypass -File .\server\start-local.ps1 -Provider zhipu -ModelName glm-4-flash-250414
+```
 
-保持服务终端开启，再从共同仓库根目录在第二个终端执行 `node haipigua/preview.cjs`，打开 `http://127.0.0.1:8877/#chat`。前端健康状态只说明服务配置存在；发送成功才说明那次模型调用可用。
+可选的本地保护参数（都不是平台账单硬上限）：
 
-自动化启动可直接运行 `node server/run-local.cjs`，通过管道或进程工具的标准输入发送一行 JSON：`{"MODEL_API_KEY":"自己的秘密","MODEL_NAME":"glm-4-flash-250414"}`。不要把真实 JSON 放进终端历史。也支持父进程安全注入的 `MODEL_API_KEY` 环境变量；此路径请同时明确注入 `MODEL_NAME=glm-4-flash-250414`，避免落回程序默认的4.7。
+```powershell
+# 估算消费达到 2 元后，本进程拒绝继续调用；重启会清零，必须同时看平台账单。
+powershell -ExecutionPolicy Bypass -File .\server\start-local.ps1 -BudgetCny 2 -MaxTurns 20
+```
 
-服务只允许官方列出的两个免费文字模型：`glm-4.7-flash`、`glm-4-flash-250414`。`run-local.cjs` 没有指定型号时仍默认4.7；更换时由启动配置明确指定 `MODEL_NAME`。地址固定 `https://open.bigmodel.cn/api/paas/v4/chat/completions`，拒绝其他模型和自定义地址。未配置、额度用完、模型异常都明确返回错误，不自动改为付费模型，也不偷偷运行本地规则充当模型结果。[智谱官方模型列表](https://docs.bigmodel.cn/cn/guide/start/model-overview)
+按提示输入对应平台的 API Key，输入使用 PowerShell 隐藏输入。密钥经子进程标准输入传递，只留在进程内存；不写配置文件、仓库、浏览器存储、命令行参数或日志。关闭进程后，下一次启动需重新输入。不要把真实密钥写进脚本、测试或前端。
+
+保持服务终端开启，再从共同仓库根目录在第二个终端执行 `node haipigua/preview.cjs`，打开 `http://127.0.0.1:8877/#chat`。页面会显示实际的平台、型号、价格和本机估算预算；健康状态只说明配置存在，发送成功才说明那次调用可用。
+
+自动化启动可直接运行 `node server/run-local.cjs`，通过管道或进程工具的标准输入发送一行 JSON：
+
+```json
+{"MODEL_PROVIDER":"aiping","MODEL_API_KEY":"自己的秘密","MODEL_NAME":"GLM-4.7-Flash","MODEL_MAX_TURNS":20}
+```
+
+不要把真实 JSON 放进终端历史。也支持父进程安全注入同名环境变量；请同时明确注入 `MODEL_PROVIDER` 和 `MODEL_NAME`。AI Ping 默认用 JSON mode，不默认发送原生 tools；如确认所选上游支持工具调用，可显式设置 `MODEL_TOOLS=1`。`MODEL_JSON_MODE=0` 可关闭 `response_format`，但这会降低结构化输出的稳定性。
 
 ## 接口
 
-`GET /api/health` 返回 `{ready,model,mode,capabilities,version}`。文字能力取决于配置，视频理解、联网检索、账号云记忆、真实积分账本均为 `false`。健康检查不验证账户额度，实际调用才确认上游可用性；不返回密钥、密钥片段或内部配置。
+`GET /api/health` 返回 `ready/provider/providerLabel/model/modelLabel/mode/capabilities/price/priceNote/budget/maxTurns/version`。`budget.estimatedSpentCny` 是按平台价格区间最高值估算的输入+输出成本，不是账单；`budget.remainingCny` 只在设置 `MODEL_BUDGET_CNY` 时出现。健康检查不验证账户余额，实际调用才确认上游可用性；不返回密钥、密钥片段或内部配置。视频理解、联网检索、账号云记忆、真实积分账本均为 `false`。
 
 `POST /api/agent`，兼容 `/api/turn` 和 `/turn`：
 
 ```json
 {
   "requestId": "浏览器生成的唯一UUID",
-  "text": "我只练了五分钟，有点难",
+  "text": "今天学了十五分钟相关的，排线好难",
   "today": "2026-10-17",
   "clockMinutes": 720,
   "now": "2026-10-17T04:00:00Z",
   "context": {
-    "ideas": [], "tasks": [], "feedback": [], "availability": {},
+    "ideas": [], "tasks": [], "feedback": [], "reviews": [], "availability": {},
     "notes": [], "chatContext": {},
     "confirmedFacts": [{"text": "用户明确确认的背景或偏好"}],
     "studio": {"preference": {"duration": 10, "energy": "low", "level": "beginner"}}
@@ -42,50 +67,104 @@ powershell -ExecutionPolicy Bypass -File .\server\start-local.ps1
 }
 ```
 
-`today` 和 `clockMinutes` 必须由前端按 `Asia/Shanghai` 计算。`text` 完整保留，1–8000 个 JavaScript 字符，HTTP 请求上限128KiB。上下文只取白名单字段并有条数/长度限制；已有 `ideas[].aiPlan` 与 `ideas[].exploration` 只保留有限的标题、步骤、标准和下一步等文字，不包含资源链接、媒体、秘密或额外属性。密钥、用户未同意上传的媒体不应进入此接口。
+`today` 和 `clockMinutes` 必须由前端按 `Asia/Shanghai` 计算。`text` 完整保留，1–8000 个 JavaScript 字符，HTTP 请求上限 128KiB。上下文只取白名单字段并有条数/长度限制；已有 `ideas[].aiPlan`、`ideas[].exploration` 和 `reviews[]` 只保留有限文字，不包含资源链接、媒体、秘密或额外属性。密钥、用户未同意上传的媒体不应进入此接口。
 
-成功：`{source:"model",analysis:{intents,clarification?,understanding?},content:{plans,explorations,reflections},trace,usage,requestId}`。沿用前端 PocketFlow 可校验的 intents 格式。`understanding` 包含可纠正的 `goal`、`facts`、`constraints`、`unknowns`；facts/constraints 必须附 `evidence`，服务端只保留逐字匹配本次原话、近期原话或用户确认事实的证据片段。证据匹配证明原话存在，不代表模型的概括绝对正确；不要直接自动写为确认记忆。
+成功：`{source:"model",analysis:{intents,clarification?,understanding?},content:{plans,explorations,reflections,reviews},trace,usage,requestId}`。
 
-Agent 1 独立调用模型理解/分流，再执行真实只读历史提取、确定性撞期检查；有相关任务时再并行调用 Agent 2 计划、Agent 3 创意实验、Agent 4 反馈。没有涉及的角色不调用、不伪造 trace。每次最多4次模型调用，资源只给标明来源的固定安全入口，不声称本次搜过网页。文本模型不看视频。
+- `analysis.intents` 沿用前端 PocketFlow 可校验的格式，新增 `review`。
+- `content.plans` / `content.explorations` 是 Agent 2/3 的建议，不是任务。
+- `content.reflections` 只用于已预约任务表单或明确完成情况的反馈，由本次 review 的调整字段派生。
+- `content.reviews` 以 `idea.id` 为键，保存这次经历的分析。
+- `trace` 记录每次真实模型调用、确定性工具和角色交接；`usage` 记录 calls/tokens/provider/model/estimatedCostCny。
+- `analysis.understanding` 的 facts/constraints 必须附逐字证据；服务端只保留逐字匹配本次原话、近期原话或用户确认事实的证据。证据匹配证明原话存在，不代表概括绝对正确。
 
-路由包含独立的 `plan` 意图，结构为 `{kind:"plan",ideaId?,newIdeaKey?,data:{canApply,duration?,energy?,level?,goal?}}`。必须明确关联已有兴趣，或同轮先创建的 `newIdeaKey`；不允许附带 `taskId/date/start/end/replaceTaskId`。`plan` 不要求预约日期时间：技能目标生成 `content.plans`，创意目标生成 `content.explorations`。前端只更新建议并保存本条 `note.advice` 快照，本轮预算不写长期偏好，不新增/修改旧任务或陪伴约定，不清除已有待改期问题。后续建议更新不改变旧消息快照；旧版无快照的模型消息只呈现自己的已保存回复。缺少合格专职模型内容则整轮拒绝，不使用本地模板补成模型输出。
+Agent 1 独立理解/分流，再执行只读历史提取和确定性撞期检查。需要时调用 Agent 2 计划、Agent 3 创意实验、Agent 4 反馈/回顾。没有涉及的角色不调用、不伪造 trace。每次最多 4 次模型调用，资源只给标明来源的固定安全入口，不声称本次搜过网页。文本模型不看视频。
 
-Agent 1 的模型请求提供可选 `route_intents` function tool，使用 `tool_choice:"auto"`；服务也接收并校验模型直接返回的 JSON。`trace.format` 区分 `function_arguments` 与 JSON 输出。当前真实回归记录为 JSON 输出，提供 tools 配置不等于实际发生或验证了原生函数调用。
+## Review：回回先分析，再真实交接
 
-当“只改建议”的原话还包含时间范围而首次路由未给出忙碌等时间操作时，服务可另请 Agent 1 复核遗漏信息。该复核明确使用 `response_format:{type:"json_object"}`，不提供 tools；它不是一次已验证的原生工具调用。代码只触发复核，忙碌事实仍由模型提取并经校验；复核只允许补 busy/note，不能改建议、创建兴趣或预约。确定的实验/课程时段与“不预约学习”可并存；假设、未确定或明确不记录的时段不应保存。复核计入同一轮4次调用、95秒总预算，不另开隐藏预算。
+`review` 用于未预约练习、补充反馈、文字/作品评价、卡点说明和回答回回追问。它不要求 taskId，不写完成状态、不写分钟数、不改预约；只有表单或明确完成情况的 `feedback` 才改任务状态。
 
-反馈表单额外发送 `reportedFeedback:{taskId,completion,minutes,feeling,reason}`。服务端直接验证这些人填写的事实，只调用反馈模型给建议，不让模型重新抽取或改写完成情况。自然语言反馈仍由Agent 1理解。日期工具以用户的 `today` 校正无歧义的单个“明天/后天”等相对日，不以UTC的 `now` 充当本地今天。
+服务端先按以下顺序确定兴趣目标，模型不能越过：
 
-每整轮最多一次结构修复，仅针对路由表示错误或反馈核心字段格式错误，仍使用同一个免费模型、完整重验并计入4次总调用。未知ID、无效日期、鉴权与容量错误不启动修复；失败不写入。无法识别的机器人表情仅改成中性姿态，不编造反馈正文。`trace/usage`也记录失败和修复；不是模型内部思考。
+1. 原话完整出现某个兴趣标题；
+2. 原话出现只属于一个兴趣的标题二字片段；
+3. 正在回答的 `chatContext.pending.ideaId`；
+4. 最近对话主题（`lastIdeaId` / 最近任务所属兴趣），且只有一个候选；
+5. 只有一个兴趣；
+6. 仍有多个相似候选时只追问一次，要求用户选 A 或 B，不猜、不硬绑旧任务。
 
-就业目标可以保存并生成准备性步骤，无明确日期、开始时间及行动时长时不会生成日程。不因理科背景默认编程、不将比赛报名当成实习履历。已有反馈及其 `nextAdjustment` 会连同对应任务传给下一次规划模型，不能把建议说成已经学会或已经完成。
+Agent 4 输出每个目标一份：
 
-本服务不存用户领域数据，不直接创建任务。前端应校验后原子应用成功响应，并以 `requestId` 去重；失败不应用部分结果。重试同一个 `requestId` 和同一请求体可复用10分钟内的内存结果/正在处理的请求；同编号不同请求体返回409。所有成功与失败均缓存，因此要主动重新调用模型时使用新编号。服务器重启清空缓存，前端自己的已应用编号去重仍需要保留。
+```json
+{
+  "reviews": {
+    "idea-id": {
+      "response": "回应这次具体经历",
+      "summary": "实际做了什么、结果如何",
+      "progress": [{"point": "有依据的进展", "evidence": "逐字引用用户原话"}],
+      "problems": [{"point": "具体卡点", "evidence": "逐字引用用户原话"}],
+      "missingEvidence": ["还缺什么证据或信息"],
+      "hasArtifact": false,
+      "needsEvidence": true,
+      "question": "只问一个最关键的问题",
+      "nextStep": "一项小行动或产出",
+      "durationScale": null,
+      "difficulty": null,
+      "emotion": "thinking",
+      "advice": "为什么这样调整"
+    }
+  }
+}
+```
 
-错误：`{error:{code,message,stage?,formatIssue?,providerStatus?,providerCode?},trace?,usage?,requestId?}`。包括未配置503、结构化结果或引用无效502、超时504、撞期或信息不足的成功澄清、限流429、同编号不同内容409。安全诊断只保留固定字段名、角色、数字业务码和HTTP状态；1305映射`MODEL_OVERLOADED`（模型访问过大），1113映射`MODEL_QUOTA`（账户余额不足），1000映射`MODEL_AUTH`（鉴权失败）。不能把1305说成密钥错误或要求充值。绝不返回上游错误原文或请求头。[智谱官方错误码](https://docs.bigmodel.cn/cn/api/api-code)
+服务端强制：
 
-## 本机边界与预算
+- `progress/problems` 的 `evidence` 必须逐字出现在本次文字、表单 reason、近期用户原话或用户确认事实中；没有证据的条目拒绝整轮。
+- 只有时长没有具体内容时 `needsEvidence=true`，先问具体做了什么或要一小段产出；不能凭时长判定学会、完成或水平。
+- 明确没有作品时 `hasArtifact=false`、`needsEvidence=true`，不伪造评分、星级或水平；必须说明还缺什么证据。
+- 表单总体“轻松”与文字“排线好难”同时出现时，`progress` 和 `problems` 都必须保留；不能用选项盖过文字，也不能断言没看到的手法/音准。
+- 文字作品可以评价文字本身：引用具体词句、指出缺失的上下文/完整段落/目标读者；不能凭一句断言整体水平。
+- 信息足够时 `needsEvidence=false`，`nextStep` 必须具体；服务端随后在同一轮实际调用 Agent 2 或 Agent 3，生成 `content.plans` / `content.explorations`，并追加一个只更新建议的 `plan` 意图。**不会创建任务、预约或改期。**
+- 信息不足时只返回 review 和问题；下一轮原话会带上 `chatContext.pending` 与 `context.reviews`，绑定同一个兴趣继续，不重复已回答的问题。
+- 已反馈任务的补充、已预约但未明确完成情况的反馈，会转成 review；任务状态和旧反馈不变。
+- 服务端不直接写浏览器状态；前端校验后原子应用，失败整轮回退，原话保留。
 
-只允许前端 `http://127.0.0.1:8877`、`http://localhost:8877` 及本服务8878的精确 Origin；Host 也必须是本机服务端口。不要求把共享口令塞进浏览器。主线程反向代理必须转发真实浏览器 Origin，不能自行补造缺失的 Origin；发送到8878时使用其本机 Host。
+表单额外发送 `reportedFeedback:{taskId,completion,minutes,feeling,reason}` 或 `reportedReview:{ideaId,completion?,minutes?,feeling?,reason}`。服务端直接验证这些人填写的事实；`reportedReview` 不改任务，`reportedFeedback` 记录完成情况和反馈，同时仍调用回回分析并尝试同轮交接。未填写的时长保持 `null`，不补 0、不补计划时长。
 
-一次只处理一段对话，同编号重试可共享进行中的请求；每分钟12段，每次启动最多60段，不自动重发整个请求。普通角色调用、信息覆盖复核和至多一次结构修复共享整轮最多4次调用、95秒；单次普通模型调用上限45秒，结构修复最多20秒且受剩余总预算限制。没有进程在响应之后继续发起新角色调用。内部缓存至多64项，10分钟过期。重启不是绕过模型账户额度的承诺。
+## 路由与建议边界
 
-此简化服务只用于用户自己机器上的演示。不能把8878监听改成公网直接发布；公网部署需增加账号鉴权、配额及持久化隔离，并重新确认部署方式。
+路由包含独立 `plan` 意图：更新已有兴趣的建议，不预约、不改旧任务。`review` 交接产生的也是这种 `plan` 意图。`plan` 不允许 `taskId/date/start/end/replaceTaskId`；本轮 duration/energy/level/goal 不写长期偏好。前端只更新 `aiPlan`/`exploration` 并保存本条 `note.advice` 快照，旧消息按自身快照显示。旧建议进入 context 前只取有限文字白名单，不带资源链接、媒体或额外属性。
+
+Agent 1 的模型请求在允许 tools 时提供可选 `route_intents` function tool，使用 `tool_choice:"auto"`；否则使用 JSON mode。服务也接收并校验模型直接返回的 JSON。`trace.format` 区分 `function_arguments` 与 JSON 输出；提供 tools 配置不等于实际发生或验证了原生函数调用。
+
+“只改建议”的原话还包含时间范围而首次路由未给出忙碌等时间操作时，服务可另请 Agent 1 复核遗漏信息。该复核明确使用 JSON mode、不提供 tools；只允许补 busy/note，不能改建议、创建兴趣或预约。复核计入同一轮 4 次调用、95 秒总预算。
+
+## 错误、预算与限流
+
+错误：`{error:{code,message,stage?,formatIssue?,providerStatus?,providerCode?},trace?,usage?,requestId?}`。绝不返回上游错误原文或请求头。
+
+AI Ping HTTP 映射：`401/403 → MODEL_AUTH`、`402 → MODEL_QUOTA`、`404 → MODEL_NOT_FOUND`（核对型号 ID 大小写）、`413 → MODEL_INPUT_TOO_LARGE`、`422 → MODEL_PARAMETERS`、`429 → MODEL_RATE_LIMIT`、`503 → MODEL_OVERLOADED`，其余 5xx → `MODEL_UNAVAILABLE`。智谱业务码仍保留：`1305 → MODEL_OVERLOADED`、`1113 → MODEL_QUOTA`、`1000 → MODEL_AUTH`。不能把 1305 说成密钥错误或要求充值。
+
+预算：每轮最多 4 次模型调用、95 秒；单次普通调用最多 45 秒；结构修复最多一次、最多 20 秒且受剩余预算限制；每次启动默认最多 60 段对话，可由 `MODEL_MAX_TURNS` 降低。`MODEL_BUDGET_CNY` 是本进程的保守估算停止线，使用价格区间最高值计算；不是平台硬限额，重启清零，必须同时看平台账单和 Key 额度。建议在 AI Ping 创建 Key 时设置固定额度。不要在验证时开多个并行代理或循环跑大量模型。
+
+服务只允许前端 `http://127.0.0.1:8877`、`http://localhost:8877` 及本服务 8878 的精确 Origin；Host 也必须是本机服务端口。不要求把共享口令塞进浏览器。主线程反向代理必须转发真实浏览器 Origin，不能自行补造缺失的 Origin；发送到 8878 时使用其本机 Host。一次只处理一段对话；每分钟 12 段；同编号重试可复用 10 分钟内结果，同编号不同请求体返回 409。内部缓存至多 64 项。服务器重启清空缓存和预算估算，前端自己的已应用编号去重仍需要保留。
+
+此简化服务只用于用户自己机器上的演示。不能把 8878 监听改成公网直接发布；公网部署需增加账号鉴权、配额、持久化隔离和独立预算，并重新确认部署方式。腾讯云静态站不能直接访问你电脑的 8878 端口。
 
 ## 验证
 
 ```powershell
-node --test --test-isolation=none tests/server-local.test.cjs
+node --test --test-isolation=none haipigua/tests/*.test.cjs
 ```
 
-33项 mock/本机HTTP检查涵盖：两个免费型号可明确选择、收费及其他型号拒绝、无秘密泄露、1305/1113/1000准确分类、精确来源和Host、8000字原话、证据引用过滤、求职目标不造日程、本地日期、撞期澄清、空引用规范化、无效ID/日期、反馈传入下一轮、一轮有界修复、表单事实保护、中性表情兼容、并发/重试去重、上游失败/超时、请求和调用限制，以及建议意图、旧建议白名单和忙碌信息复核等合同。这些测试不调用智谱，不代表真实账号额度或输出质量已验证。
+当前 106 项离线检查通过，覆盖：两个平台与型号白名单、AI Ping 地址/JSON mode/错误映射/预算、健康状态不泄露密钥、review 目标解析与相近兴趣追问、逐字证据、时长-only 追问、表单“轻松+排线难”、补充反馈不改旧任务、同轮 handoff、失败原子回退、前端持久化/撤销/上下文/渲染，以及原有路由、预约、撞期、修复和限流合同。这些测试不调用真实平台，不代表真实账号额度或输出质量已验证。
 
-在 `haipigua` 目录运行全部离线回归：
+真实调用另用：
 
 ```powershell
-node --test --test-isolation=none tests/*.test.cjs
+node haipigua/scripts/evaluate-live.cjs --case route
+node haipigua/scripts/evaluate-live.cjs
+node haipigua/scripts/evaluate-conversations.cjs
 ```
 
-当前85项通过：前端52（本地流程27、模型桥11、客户端11、消息渲染3）、本机服务33。真实调用另用 `node scripts/evaluate-live.cjs --case route`、基础四轮 `node scripts/evaluate-live.cjs` 或固定合成上下文的五种对话 `node scripts/evaluate-conversations.cjs`；运行期间暂停浏览器发送。脚本和判定规则见 `../scripts/README.md`。
-
-2026-10-17当前版本基础四轮再次全部通过，使用 `glm-4-flash-250414` 共8次真实调用（分流3、反馈2、下一步2、歧义1）。本轮原先失败的“只改建议”“完整忙碌时段”“继续创意”三条已连续复跑通过；覆盖复核改为严格 JSON 输出后，含加强版假设忙碌与混合真实忙碌的五种固定样例5/5通过。浏览器另以2次真实调用生成“撰写嗨皮瓜项目卡”建议，没有新增预约，行动约定仍为原有1项。失败历史与修复状态见 `../LIVE_VALIDATION.md`。这些结果不能推算泛化准确率、长期稳定性或其他浏览器场景的表现。
+运行期间暂停浏览器发送。脚本和判定规则见 `../scripts/README.md`。真实结果保存在被 Git 忽略的 `.local/`；记录真实型号、调用次数、可用时费用和未通过项。任何评测失败均返回非零退出码。有限样例不能推算泛化准确率或长期稳定性。
