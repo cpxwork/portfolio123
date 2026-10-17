@@ -1,0 +1,25 @@
+{
+  "comment": "内核合同测试用例：错误/边界输入必须返回完整 {ok:false,error} 且 exit 0（协议：只有真崩溃才非 0）",
+  "cases": [
+    { "name": "unknown-cmd", "payload": "{\"cmd\":\"nope\",\"args\":{}}", "expectError": "未知 cmd" },
+    { "name": "empty-object", "payload": "{}", "expectError": "未知 cmd" },
+    { "name": "not-json", "payload": "not json", "expectError": "JSON 解析失败" },
+    { "name": "empty-stdin", "payload": "", "expectError": "空请求" },
+    { "name": "review-grade-0", "payload": "{\"cmd\":\"review\",\"args\":{\"grade\":0}}", "expectError": "grade" },
+    { "name": "review-grade-5", "payload": "{\"cmd\":\"review\",\"args\":{\"grade\":5}}", "expectError": "grade" },
+    { "name": "interval-retention-out-of-range", "payload": "{\"cmd\":\"interval\",\"args\":{\"stability\":5,\"retention\":1.5}}", "expectError": "retention" },
+    { "name": "interval-retention-zero", "payload": "{\"cmd\":\"interval\",\"args\":{\"stability\":5,\"retention\":0}}", "expectError": "retention" },
+    { "name": "review-state-invalid", "payload": "{\"cmd\":\"review\",\"args\":{\"state\":{\"stability\":999999,\"difficulty\":5},\"elapsedDays\":3,\"grade\":3}}", "expectError": "Memory state" },
+    { "name": "graph-order-cycle", "payload": "{\"cmd\":\"graph\",\"args\":{\"action\":\"order\",\"nodes\":[\"a\",\"b\",\"c\"],\"edges\":[{\"from\":\"a\",\"to\":\"b\"},{\"from\":\"b\",\"to\":\"c\"},{\"from\":\"c\",\"to\":\"a\"}]}}", "expectError": "cycle" },
+    { "name": "graph-order-missing-endpoint", "payload": "{\"cmd\":\"graph\",\"args\":{\"action\":\"order\",\"nodes\":[\"a\",\"b\"],\"edges\":[{\"from\":\"a\",\"to\":\"x\"}]}}", "expectError": "endpoint missing" },
+    { "name": "graph-prereqs-no-kpid", "payload": "{\"cmd\":\"graph\",\"args\":{\"action\":\"prereqs\",\"nodes\":[\"a\"],\"edges\":[]}}", "expectError": "kpId" },
+    { "name": "graph-unknown-action", "payload": "{\"cmd\":\"graph\",\"args\":{\"action\":\"bogus\"}}", "expectError": "graph.action" },
+    { "name": "scanDebts-no-edges", "payload": "{\"cmd\":\"scanDebts\",\"args\":{}}", "expectError": "edges" },
+    { "name": "planDay-no-debts", "payload": "{\"cmd\":\"planDay\",\"args\":{}}", "expectError": "debts" },
+    { "name": "transition-no-attempt", "payload": "{\"cmd\":\"transition\",\"args\":{}}", "expectError": "attempt" },
+    { "name": "extractPoints-no-text", "payload": "{\"cmd\":\"extractPoints\",\"args\":{}}", "expectError": "text" },
+    { "name": "genQuestions-no-input", "payload": "{\"cmd\":\"genQuestions\",\"args\":{}}", "expectError": "genQuestions" },
+    { "name": "analyzeWrong-no-question", "payload": "{\"cmd\":\"analyzeWrong\",\"args\":{}}", "expectError": "question" },
+    { "name": "buildGraph-not-implemented", "payload": "{\"cmd\":\"buildGraph\",\"args\":{}}", "expectError": "buildGraph" }
+  ]
+}

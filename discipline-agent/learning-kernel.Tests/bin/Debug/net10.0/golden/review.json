@@ -1,0 +1,243 @@
+[
+  {
+    "name": "new-again",
+    "args": {
+      "grade": 1
+    },
+    "expect": {
+      "stability": 0.212,
+      "difficulty": 6.4133,
+      "retrievability": 1,
+      "intervalDays": 0.212
+    }
+  },
+  {
+    "name": "new-hard",
+    "args": {
+      "grade": 2
+    },
+    "expect": {
+      "stability": 1.2931,
+      "difficulty": 5.1121707056,
+      "retrievability": 1,
+      "intervalDays": 1.2931
+    }
+  },
+  {
+    "name": "new-good",
+    "args": {
+      "grade": 3
+    },
+    "expect": {
+      "stability": 2.3065,
+      "difficulty": 2.11810397046,
+      "retrievability": 1,
+      "intervalDays": 2.3065
+    }
+  },
+  {
+    "name": "new-easy-d0-clamped-to-1",
+    "args": {
+      "grade": 4
+    },
+    "expect": {
+      "stability": 8.2956,
+      "difficulty": 1,
+      "retrievability": 1,
+      "intervalDays": 8.2956
+    }
+  },
+  {
+    "name": "recall-good-3d",
+    "args": {
+      "state": {
+        "stability": 5,
+        "difficulty": 5
+      },
+      "elapsedDays": 3,
+      "grade": 3
+    },
+    "expect": {
+      "stability": 13.4047521518,
+      "difficulty": 4.9902283693,
+      "retrievability": 0.931150940958,
+      "intervalDays": 13.4047521518
+    }
+  },
+  {
+    "name": "lapse-again-3d",
+    "args": {
+      "state": {
+        "stability": 5,
+        "difficulty": 5
+      },
+      "elapsedDays": 3,
+      "grade": 1
+    },
+    "expect": {
+      "stability": 0.905779241374,
+      "difficulty": 8.3417623693,
+      "retrievability": 0.931150940958,
+      "intervalDays": 0.905779241374
+    }
+  },
+  {
+    "name": "recall-hard-3d",
+    "args": {
+      "state": {
+        "stability": 5,
+        "difficulty": 5
+      },
+      "elapsedDays": 3,
+      "grade": 2
+    },
+    "expect": {
+      "stability": 10.0546179441,
+      "difficulty": 6.6659953693,
+      "retrievability": 0.931150940958,
+      "intervalDays": 10.0546179441
+    }
+  },
+  {
+    "name": "recall-easy-3d",
+    "args": {
+      "state": {
+        "stability": 5,
+        "difficulty": 5
+      },
+      "elapsedDays": 3,
+      "grade": 4
+    },
+    "expect": {
+      "stability": 20.7412603052,
+      "difficulty": 3.3144613693,
+      "retrievability": 0.931150940958,
+      "intervalDays": 20.7412603052
+    }
+  },
+  {
+    "name": "same-day-good",
+    "args": {
+      "state": {
+        "stability": 5,
+        "difficulty": 5
+      },
+      "elapsedDays": 0,
+      "grade": 3
+    },
+    "expect": {
+      "stability": 5,
+      "difficulty": 4.9902283693,
+      "retrievability": 1,
+      "intervalDays": 5
+    }
+  },
+  {
+    "name": "same-day-again-no-floor",
+    "args": {
+      "state": {
+        "stability": 5,
+        "difficulty": 5
+      },
+      "elapsedDays": 0,
+      "grade": 1
+    },
+    "expect": {
+      "stability": 1.59681799799,
+      "difficulty": 8.3417623693,
+      "retrievability": 1,
+      "intervalDays": 1.59681799799
+    }
+  },
+  {
+    "name": "min-stability-boost",
+    "args": {
+      "state": {
+        "stability": 0.001,
+        "difficulty": 1
+      },
+      "elapsedDays": 0,
+      "grade": 4
+    },
+    "expect": {
+      "stability": 0.00284768475469,
+      "difficulty": 1,
+      "retrievability": 1,
+      "intervalDays": 0.00284768475469
+    }
+  },
+  {
+    "name": "max-stability-clamp",
+    "args": {
+      "state": {
+        "stability": 36500,
+        "difficulty": 1
+      },
+      "elapsedDays": 100,
+      "grade": 1
+    },
+    "expect": {
+      "stability": 22.0125466345,
+      "difficulty": 7.0269895693,
+      "retrievability": 0.999586477906,
+      "intervalDays": 22.0125466345
+    }
+  },
+  {
+    "name": "negative-elapsed-clamped",
+    "args": {
+      "state": {
+        "stability": 5,
+        "difficulty": 5
+      },
+      "elapsedDays": -5,
+      "grade": 3
+    },
+    "expect": {
+      "stability": 5,
+      "difficulty": 4.9902283693,
+      "retrievability": 1,
+      "intervalDays": 5
+    }
+  },
+  {
+    "name": "custom-w-args",
+    "args": {
+      "state": {
+        "stability": 5,
+        "difficulty": 5
+      },
+      "elapsedDays": 3,
+      "grade": 3,
+      "w": [
+        0.5,
+        1.5,
+        3,
+        9,
+        6,
+        0.8,
+        3,
+        0.001,
+        1.9,
+        0.17,
+        0.8,
+        1.5,
+        0.06,
+        0.27,
+        1.65,
+        0.6,
+        1.9,
+        0.54,
+        0.09,
+        0.066,
+        0.15
+      ]
+    },
+    "expect": {
+      "stability": 13.6640320471,
+      "difficulty": 4.99097682362,
+      "retrievability": 0.930956174576,
+      "intervalDays": 13.6640320471
+    }
+  }
+]

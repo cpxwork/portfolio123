@@ -85,7 +85,7 @@ function createFakeClock(startIso) {
   const timers = [];
   let seq = 0;
 
-  function nowFn() { return new Date(now.getTime()); }
+  function nowFn() { return now.getTime(); } // 全项目时钟契约：返回 epoch 毫秒数
 
   function setTimeoutFn(fn, ms) {
     const id = ++seq;

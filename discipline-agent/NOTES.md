@@ -205,3 +205,68 @@ A-M1 子代理（206e33bf）按用户指示停手并交付盘点。处理结果�
 **demo 双模式复核**：`node demo.js` exit 0（全链路闭环，sha256 逐字节还原）；`node demo.js --llm` 无 env → exit 2 显式报错，无静默回退。
 
 **对 00:45 条目的勘误（其"escalateWithLlm 实现要点"第 4 条已过时）**：自动升级定时器链已随物理删除移除，`start()` 不再排自动链定时器，`clock.clearAll()` 仅为 escalation-llm 套件的假时钟清理需要；第 3 条的 `escalate({reschedule:true})` 调用已改为 `escalate()`。其余要点（5 条物理闸门、双快照、`currentLevel === wantLevel` 判定、理由融合、快照新字段）仍然有效。
+
+### 2026-10-17 02:20 | 两处小口径统一完成：#19 时钟契约 / #20 L4 capped 措辞
+
+上表 #19、#20 两行的"待统一 / 文案待优化"就此关闭（表格行保留作历史）。
+
+**#19 时钟契约统一为 `() => number`（epoch 毫秒数）**——全项目所有可注入时钟（`clock.now` / `nowFn`）一律返回毫秒数，需要 Date 处显式 `new Date(ms)`：
+- `state-sensor.js`：`createStateSensor` 的 `clock.now` 与 `createCaptureScheduler` 的 `nowFn` 均由返回 Date 改为返回毫秒数；`poll`/`postNotify` 间隔判断改纯数值差；`isoOffset`/`hourOf` 调用点统一包 `new Date(ms)`；`notifySent(at)` 的 `at` 参数约定毫秒数（无参调用不变）；两处 JSDoc 写明契约。
+- `instructions.js`（`createInstructionBus.nowFn`）与 `executor.js`（`createExecutor.nowFn`）同步改为毫秒数；executor 内部 +08:00 格式化处改 `new Date(nowFn() + 8 * 3600000)`。
+- `fake-backend.js` 的 `createFakeClock().now` 由返回 Date 对象改为返回毫秒数（内部计时不变）。
+- `demo.js` 传给 state-sensor 的 `clock: { now: () => new Date() }` 改为 `() => Date.now()`；**原注释"clock.now 约定返回 Date"作废**。
+- `escalation.js` 本来就是毫秒数契约，未动。
+- **契约分层（明确排除项）**：`manifest.js`/`audit.js` 的 `nowFn` 返回 ISO 串，它是**时间戳格式化器**不是时钟，保持 `() => string`；`normalizeInstruction`/`validateInstruction` 的 `opts.now` 与 `extractTodosWithLlm` 的 `opts.now` 是**业务参考时间**（Date），属纯函数参数，不属时钟注入契约。
+- 测试适配：`state-sensor.test.js` 3 处 `now: () => new Date('…')` → `.getTime()`；其余套件（escalation / escalation-llm 的 fakeClock 本就是毫秒数）未动。
+
+**#20 L4 `capped` 措辞优化**（`status` 枚举值不变，仅文案与注释）：
+- `STATUS.CAPPED` 注释 → "封顶态：未授权/日限封顶（本次未升级），或 L4 已执行（无下一级可升）"。
+- 已在 L4 再 `tick()`：reason `'已到 L4 顶'` → `'L4 已在执行中（最高强制级），无下一级可升，本次不升级'`。
+- 成功升到 L4 后：reason `'已到 L4 顶，等待用户完成步骤'` → `'L4 已下发并执行（最高强制级），无下一级可升，等待用户完成步骤'`——消除"L4 没执行"的误读。
+- `demo.js` 桩 strategist 文案同步：`'L4 已执行，等用户完成步骤'`。
+
+**回归**：`node run-tests.js` 11 套全绿 0 失败；`node demo.js` exit 0，`node demo.js --llm` 无 env exit 2，行为不变。
+
+### 2026-10-17 02:30 | §9 格式里程碑报告补齐，开放项清零
+
+**`reports/` 新增 5 个文件**：`A-M0.md` / `A-M3.md` / `A-M4.md` / `A-M5.md` 四份第 9 节格式里程碑报告 + `README.md` 索引。均为 2026-10-17 按当前代码现状补写核对（里程碑实际完成于 2026-10-16）；架构变更（规则→多模型、物理删除）对各里程碑的影响如实记录在各报告第 3 节"契约偏差"，含 A-M4"纯规则状态机→strategist 模型 + 物理闸门"、A-M3"engine.js 步骤库→planner 模型"的显式变更说明。
+
+**报告口径**：A-M2 报告 id `9489a94f`（历史会话提交，文本未入库）；A-M1 未单列——不在原待办清单（00:45 条目只列 A-M0/M3/M4/M5），未擅自扩大范围，**待用户决定**是否补写。
+
+**至此原"仍开放"清单全部关闭**：#19 时钟契约 / #20 capped 措辞（02:20 条目）、4 份里程碑报告（本条）。
+
+**杂项核实结果**：`assets/README.md` 存在，demo.js 引用成立；`node_modules/` 为早前 npm 超时残留（adm-zip / global-agent 等间接包，项目零第三方依赖不受影响，run-tests/demo 均不读它）——**待用户决定**是否删除。
+
+**收尾回归**：11 套全绿 + `node demo.js` exit 0。
+
+### 2026-10-17 04:30 | M-K 步骤①②③：基线克隆、csproj 决策、learning-kernel 骨架跑通
+
+**上游来源对照（M-K 步骤① 收口）**：
+| 库 | 基线 | 哈希 |
+|---|---|---|
+| Astral-Path | `ClassTechStar/-Knowledge-Debt-Astral-Path` main | `45e6cab`（2026-10-17，比任务书晚一天） |
+| ReciteHelper | `ArabidopsisDev/ReciteHelper` primary | `3943f38`（2026-10-09） |
+| GalReview | `OpenRecite/GalReview` main | `161ca2d`（与任务书锁定一致） |
+| Notehelper | `ClassTechStar/Notehelper` main | `daf8a98` |
+| Reciting-us | `HelloZWH-0620/Reciting-us` main | `40a00d0`（2026-10-12） |
+克隆位置 `%TEMP%/mk-upstream/`（只读引用，不参与构建）。
+
+**Reciting-us 基线偏差（任务书分支不存在）**：任务书指定基线 `feat/v0.2.0-p1-p4-full-refactor` **在上游已不存在**（clone 报 Remote branch not found）。上游只有 `main`（40a00d0，2026-10-12，超集：含 js/error-boundary.js、js/migrate.js、config/bundled.js、liquid-glass.js）与 `issue-2-feihua`（fd18932，2026-08-19）。**取 main@40a00d0 为基线**。所需资产定位：出题流水线与判分逻辑内联在 `Memorization UI/app.html`（8061 行单文件应用），通假字判分归一化映射表在 `app.html:4019` `normalizeAnswer()`：10 对（知→智、反→返、阙→缺、辟→避、贾→价、无→毋、说→悦、内→纳、被→披、属→嘱）+ 标点/空白剥离，归一化方向为通假字→本字；`config/bundled.js` 是内置题库数据（6 行 JSON 大对象，虚词选择题）。`js/` 目录只有 error-boundary/migrate 两个基础设施文件，无出题逻辑。
+
+**步骤② csproj 决策（TargetFramework 全部 net10.0，与本机 dotnet 10.0.300 匹配）**：
+- astral-path `AstralPath.Core`：**零依赖** → Algorithms/Formula/Models/Extensions/Formatting/Planner 整目录拷贝。
+- recitehelper `ReciteHelper.Core`：仅依赖 `SharedKernel`（亦零依赖）→ 拷 Scheduling/ 全部 + FileVectorStore + VectorEntry + Semantics + Entity(SharedKernel)。
+- recitehelper `Infrastructure`：net10.0-windows7.0 + 16 个 NuGet（OpenAI/LlmTornado/SemanticKernel/Onnx/Docnet/jieba/FreeSpire…）→ **KnowledgeBaseService 不拷**（按红线 8 其 LLM 部分收口 Node llm-client 重实现）；Agent/MimoClient/KeyEnvelope 同理不拷（C# 不直连 API）。
+- 引用方式 = **拷贝最小 .cs 集 + 自建干净 csproj**（保留原命名空间零改动），非 ProjectReference（上游在临时目录）。
+
+**M-K 裁剪决策（步骤② 附加，随 build 迭代收窄依赖链）**：`LegacyReviewMigrator.cs` 不拷——任务书 §3.1 "迁移器保留接口不实现历史迁移"，本项目无旧数据；连带删除 `Project.cs`/`Question.cs`/`MemoryRecord.cs`/`ReviewTag.cs`（纯迁移链）。`FsrsOptimizer.cs` 仅删 `ExtractSequences(Project)` 静态 IO 辅助（cmd 直接收 reviewSequences），算法本体 Evaluate/Fit/梯度/Adam 零改动。`ReviewGrader`/`WeightProjector` 经核实零迁移链依赖，保留。
+
+**步骤③ learning-kernel 骨架（`dotnet build` 0 错误，Node↔C# 边界全通）**：
+- `learning-kernel/learning-kernel.csproj`（net10.0 console，零 NuGet）+ `Program.cs`（439 行）：单命令单进程 JSON 边界，stdin `{"cmd","args"}` → stdout `{"ok",true,data}` / `{"ok":false,"error"}` / `{"ok":true,"needLLM":{...}}`（顶层 needLLM 挂起，符合红线 8 字面）。ok:false 也 exit 0（响应完整可解析），仅内核真崩溃才非 0 退出——契约测试按此区分。
+- 9 个确定性 cmd 已实现：review/interval（FSRS-6）、score（BASELINE 掌握分公式）、scanDebts（impact-v2）、transition（SaleStateMachine + probe 模式）、planDay（PlannerBuilder.Build + 可选 checkDays 走 PlannerConstraintChecker.Check）、graph（action=order 拓扑序+环校验 / prereqs 直接先修；layers/bottlenecks/downstreamMass 待补）、optimize（FsrsOptimizer.Fit）。3 个 needLLM 挂起：extractPoints/genQuestions/analyzeWrong（后处理在 ⑥⑧ 步实现）。buildGraph 占位 NotImplementedException（⑦ 步）。
+- **score 实现决策**：0 作答记录时 Beta 均值取 0.5（无信息先验），任务书公式未覆盖此边界。
+- **修复**：`Console.InputEncoding = UTF8`（默认 GBK 代码页把中文 stdin 解成无效字节）。
+- Node 侧 `learning-kernel.js`：execFile + stdin 写请求；KERNEL 路径双模式（env `LEARNING_KERNEL_EXE` 覆盖 > publish/ > bin/Debug/）；超时默认 5s、optimize/buildGraph 60s；仅"非零退出且 stdout 不可解析"才 reject（code=KERNEL_CRASH），ok:false 正常 resolve 由业务判断（callOk 便捷抛错版）。**踩坑**：kernelPath 首版误带一层 `..`（文件本就在 discipline-agent 下）。
+- 冒烟手算吻合：interval(S=5,R=0.9)→5 天（定义自证）；score(6,2,c4,age2,streak2,reps8)→know=0.7575、S=7.359、retention=0.7620、score=0.7589 全对上。单次调用 634ms（dotnet 冷启动，5s 超时裕度足）。
+
+**score cmd 对齐上游修正（04:50，推翻本条目上面的"score 实现决策"）**：任务书 §3.2 散文公式与上游 `MasteryCalculator.ComputeScore`（score-v2）有三处实质差异，**以上游为准重写 CmdScore**：① Beta 后验均值用 Jeffreys 先验 `(s+0.5)/(s+f+1)`（非 s/(s+f)）；② prereqSupport=(1-λ)·mean+λ·min（λ=PrereqWeakMix=0.65，非纯 mean）；③ **无先修时 prereqSupport 中性 0.5、ceiling=1.0（不封顶）**——任务书"无图谱退化 prereqSupport=know"与上游不符，不采纳。参数形状相应改为 `{attempts, successes, confidence, lastAgeDays, streak, prereqScores?}`（successes 自动 clamp 到 [0,attempts]；S 公式的 n=max(attempts,1)）。修正后手算：emp=0.7222、know=0.7339、score=0.6956（无先修）/0.6766（先修[0.9,0.3]，ceiling=0.685 生效前 raw 已更低）。ScoreCalculator（RecentAcc/Sev/SelfConf 口径）是另一套销账评分，与 score cmd 无关。

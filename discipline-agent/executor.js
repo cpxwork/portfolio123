@@ -127,7 +127,7 @@ function existingNames(dir) {
  * createExecutor
  * @param {object} opts
  * @param {string} opts.workRoot 执行范围根（同时是隔离区所在）
- * @param {() => Date} [opts.nowFn] 可注入时钟
+ * @param {() => number} [opts.nowFn] 可注入时钟（epoch 毫秒数，全项目统一契约）
  * @param {string} [opts.auditPath] 覆盖审计日志路径（测试用）
  * @param {(prefix:string)=>string} [opts.idFn] 覆盖 manifestId 生成器（测试用）
  */
@@ -135,7 +135,7 @@ function createExecutor(opts) {
   const options = opts || {};
   if (!options.workRoot) throw new Error('createExecutor 需要 opts.workRoot');
   const workRoot = validateWorkRoot(options.workRoot);
-  const nowFn = options.nowFn || (() => new Date());
+  const nowFn = options.nowFn || (() => Date.now());
 
   const disciplineRoot = path.join(workRoot, DISCIPLINE_DIR);
   const manifestsRoot = path.join(disciplineRoot, 'manifests');
@@ -154,8 +154,7 @@ function createExecutor(opts) {
     root: manifestsRoot,
     auditPath: options.auditPath,
     nowFn: () => {
-      const d = nowFn();
-      const s = new Date(d.getTime() + 8 * 3600000);
+      const s = new Date(nowFn() + 8 * 3600000);
       const pad = n => String(n).padStart(2, '0');
       return s.getUTCFullYear() + '-' + pad(s.getUTCMonth() + 1) + '-' + pad(s.getUTCDate()) +
         'T' + pad(s.getUTCHours()) + ':' + pad(s.getUTCMinutes()) + ':' + pad(s.getUTCSeconds()) + '+08:00';
@@ -165,7 +164,7 @@ function createExecutor(opts) {
 
   /** executor 侧动作日志（与 manifest store 的审计共用同一文件） */
   function log(entry) {
-    const iso = new Date(nowFn().getTime() + 8 * 3600000).toISOString().replace('Z', '+00:00');
+    const iso = new Date(nowFn() + 8 * 3600000).toISOString().replace('Z', '+00:00');
     fs.appendFileSync(store.auditPath, JSON.stringify(Object.assign({ ts: iso }, entry)) + '\n', 'utf8');
   }
 

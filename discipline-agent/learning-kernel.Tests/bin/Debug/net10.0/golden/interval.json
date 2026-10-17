@@ -1,0 +1,170 @@
+[
+  {
+    "name": "s5-r0.9",
+    "args": {
+      "stability": 5,
+      "retention": 0.9
+    },
+    "expect": {
+      "intervalDays": 5,
+      "stability": 5,
+      "retention": 0.9
+    }
+  },
+  {
+    "name": "s2.3065-r0.9",
+    "args": {
+      "stability": 2.3065,
+      "retention": 0.9
+    },
+    "expect": {
+      "intervalDays": 2.3065,
+      "stability": 2.3065,
+      "retention": 0.9
+    }
+  },
+  {
+    "name": "s0.212-r0.9",
+    "args": {
+      "stability": 0.212,
+      "retention": 0.9
+    },
+    "expect": {
+      "intervalDays": 0.212,
+      "stability": 0.212,
+      "retention": 0.9
+    }
+  },
+  {
+    "name": "s13.404752151836563-r0.9",
+    "args": {
+      "stability": 13.4047521518,
+      "retention": 0.9
+    },
+    "expect": {
+      "intervalDays": 13.4047521518,
+      "stability": 13.4047521518,
+      "retention": 0.9
+    }
+  },
+  {
+    "name": "s36500-r0.9",
+    "args": {
+      "stability": 36500,
+      "retention": 0.9
+    },
+    "expect": {
+      "intervalDays": 36500,
+      "stability": 36500,
+      "retention": 0.9
+    }
+  },
+  {
+    "name": "s5-r0.8",
+    "args": {
+      "stability": 5,
+      "retention": 0.8
+    },
+    "expect": {
+      "intervalDays": 16.5797989312,
+      "stability": 5,
+      "retention": 0.8
+    }
+  },
+  {
+    "name": "s5-r0.85",
+    "args": {
+      "stability": 5,
+      "retention": 0.85
+    },
+    "expect": {
+      "intervalDays": 9.53213066526,
+      "stability": 5,
+      "retention": 0.85
+    }
+  },
+  {
+    "name": "s5-r0.95",
+    "args": {
+      "stability": 5,
+      "retention": 0.95
+    },
+    "expect": {
+      "intervalDays": 2.01279345995,
+      "stability": 5,
+      "retention": 0.95
+    }
+  },
+  {
+    "name": "s5-r0.99",
+    "args": {
+      "stability": 5,
+      "retention": 0.99
+    },
+    "expect": {
+      "intervalDays": 0.343491931114,
+      "stability": 5,
+      "retention": 0.99
+    }
+  },
+  {
+    "name": "s0.001-r0.9",
+    "args": {
+      "stability": 0.001,
+      "retention": 0.9
+    },
+    "expect": {
+      "intervalDays": 0.001,
+      "stability": 0.001,
+      "retention": 0.9
+    }
+  },
+  {
+    "name": "s0.001-r0.8",
+    "args": {
+      "stability": 0.001,
+      "retention": 0.8
+    },
+    "expect": {
+      "intervalDays": 0.00331595978623,
+      "stability": 0.001,
+      "retention": 0.8
+    }
+  },
+  {
+    "name": "s36500-r0.5",
+    "args": {
+      "stability": 36500,
+      "retention": 0.5
+    },
+    "expect": {
+      "intervalDays": 3297939.7186,
+      "stability": 36500,
+      "retention": 0.5
+    }
+  },
+  {
+    "name": "s100-r0.75",
+    "args": {
+      "stability": 100,
+      "retention": 0.75
+    },
+    "expect": {
+      "intervalDays": 556.954622147,
+      "stability": 100,
+      "retention": 0.75
+    }
+  },
+  {
+    "name": "s1-r0.7",
+    "args": {
+      "stability": 1,
+      "retention": 0.7
+    },
+    "expect": {
+      "intervalDays": 9.28791118242,
+      "stability": 1,
+      "retention": 0.7
+    }
+  }
+]

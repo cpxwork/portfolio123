@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <AssemblyName>learning-kernel</AssemblyName>
+    <RootNamespace>LearningKernel</RootNamespace>
+    <NoWarn>$(NoWarn);CS8509</NoWarn>
+  </PropertyGroup>
+
+  <!-- src/**/*.cs 自动包含：上游算法源码（原命名空间零改动）+ 本文件 Kernel 入口 -->
+
+</Project>

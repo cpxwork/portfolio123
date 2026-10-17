@@ -34,7 +34,7 @@ const STATUS = Object.freeze({
   IDLE: 'idle',
   RUNNING: 'running',
   SUSPENDED: 'suspended',   // 模型判定挂起（等人回来）
-  CAPPED: 'capped',         // 触达单日上限或未授权
+  CAPPED: 'capped',         // 封顶态：未授权/日限封顶（本次未升级），或 L4 已执行（无下一级可升）
   REVOKED: 'revoked',
   COMPLETED: 'completed'
 });
@@ -213,7 +213,7 @@ function createEscalation(opts) {
     const to = from === null ? 'L0' : nextLevel(from);
     if (!to) {
       status = STATUS.CAPPED;
-      reason = '已到 L4 顶';
+      reason = 'L4 已在执行中（最高强制级），无下一级可升，本次不升级';
       return snapshot();
     }
     // 时间门禁：手动 tick 也不能跳过真实间隔，否则"每级之间留足等待时间"失效
@@ -234,7 +234,7 @@ function createEscalation(opts) {
 
     if (!nextLevel(to)) {
       status = STATUS.CAPPED;
-      reason = '已到 L4 顶，等待用户完成步骤';
+      reason = 'L4 已下发并执行（最高强制级），无下一级可升，等待用户完成步骤';
     }
     return snapshot();
   }

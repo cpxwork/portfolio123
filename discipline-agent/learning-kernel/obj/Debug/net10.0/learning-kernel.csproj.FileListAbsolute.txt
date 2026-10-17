@@ -1,0 +1,15 @@
+C:\Users\yi\laisgo\portfolio123\discipline-agent\learning-kernel\obj\Debug\net10.0\learning-kernel.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\yi\laisgo\portfolio123\discipline-agent\learning-kernel\obj\Debug\net10.0\learning-kernel.AssemblyInfoInputs.cache
+C:\Users\yi\laisgo\portfolio123\discipline-agent\learning-kernel\obj\Debug\net10.0\learning-kernel.AssemblyInfo.cs
+C:\Users\yi\laisgo\portfolio123\discipline-agent\learning-kernel\obj\Debug\net10.0\learning-kernel.csproj.CoreCompileInputs.cache
+C:\Users\yi\laisgo\portfolio123\discipline-agent\learning-kernel\obj\Debug\net10.0\learning-kernel.sourcelink.json
+C:\Users\yi\laisgo\portfolio123\discipline-agent\learning-kernel\bin\Debug\net10.0\learning-kernel.exe
+C:\Users\yi\laisgo\portfolio123\discipline-agent\learning-kernel\bin\Debug\net10.0\learning-kernel.deps.json
+C:\Users\yi\laisgo\portfolio123\discipline-agent\learning-kernel\bin\Debug\net10.0\learning-kernel.runtimeconfig.json
+C:\Users\yi\laisgo\portfolio123\discipline-agent\learning-kernel\bin\Debug\net10.0\learning-kernel.dll
+C:\Users\yi\laisgo\portfolio123\discipline-agent\learning-kernel\bin\Debug\net10.0\learning-kernel.pdb
+C:\Users\yi\laisgo\portfolio123\discipline-agent\learning-kernel\obj\Debug\net10.0\learning-kernel.dll
+C:\Users\yi\laisgo\portfolio123\discipline-agent\learning-kernel\obj\Debug\net10.0\refint\learning-kernel.dll
+C:\Users\yi\laisgo\portfolio123\discipline-agent\learning-kernel\obj\Debug\net10.0\learning-kernel.pdb
+C:\Users\yi\laisgo\portfolio123\discipline-agent\learning-kernel\obj\Debug\net10.0\learning-kernel.genruntimeconfig.cache
+C:\Users\yi\laisgo\portfolio123\discipline-agent\learning-kernel\obj\Debug\net10.0\ref\learning-kernel.dll

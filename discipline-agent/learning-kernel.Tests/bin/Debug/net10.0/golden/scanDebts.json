@@ -1,0 +1,226 @@
+[
+  {
+    "name": "zero-freq",
+    "args": {
+      "edges": [
+        {
+          "scoreFrom": 0.9,
+          "scoreTo": 0.3,
+          "weight": 1,
+          "edgeType": "prerequisite",
+          "freq": 0
+        }
+      ]
+    },
+    "expect": {
+      "impact": 0,
+      "hit": false
+    }
+  },
+  {
+    "name": "strong-parent-weak-child",
+    "args": {
+      "edges": [
+        {
+          "scoreFrom": 0.9,
+          "scoreTo": 0.3,
+          "weight": 1,
+          "edgeType": "prerequisite",
+          "freq": 3
+        }
+      ]
+    },
+    "expect": {
+      "impact": 0.479219339204,
+      "hit": true
+    }
+  },
+  {
+    "name": "weak-parent",
+    "args": {
+      "edges": [
+        {
+          "scoreFrom": 0.3,
+          "scoreTo": 0.3,
+          "weight": 1,
+          "edgeType": "prerequisite",
+          "freq": 3
+        }
+      ]
+    },
+    "expect": {
+      "impact": 0.0605980805513,
+      "hit": false
+    }
+  },
+  {
+    "name": "strong-child",
+    "args": {
+      "edges": [
+        {
+          "scoreFrom": 0.9,
+          "scoreTo": 0.9,
+          "weight": 1,
+          "edgeType": "prerequisite",
+          "freq": 3
+        }
+      ]
+    },
+    "expect": {
+      "impact": 0.0225583618505,
+      "hit": false
+    }
+  },
+  {
+    "name": "transfer-gap-multiplier",
+    "args": {
+      "edges": [
+        {
+          "scoreFrom": 0.9,
+          "scoreTo": 0.3,
+          "weight": 1,
+          "edgeType": "transferGap",
+          "freq": 3
+        }
+      ]
+    },
+    "expect": {
+      "impact": 0.551102240085,
+      "hit": true
+    }
+  },
+  {
+    "name": "cascade-downstream",
+    "args": {
+      "edges": [
+        {
+          "scoreFrom": 0.9,
+          "scoreTo": 0.3,
+          "weight": 1,
+          "edgeType": "prerequisite",
+          "freq": 3,
+          "downstreamCount": 5
+        }
+      ]
+    },
+    "expect": {
+      "impact": 0.582256833867,
+      "hit": true
+    }
+  },
+  {
+    "name": "heavy-volume",
+    "args": {
+      "edges": [
+        {
+          "scoreFrom": 0.9,
+          "scoreTo": 0.3,
+          "weight": 1,
+          "edgeType": "prerequisite",
+          "freq": 20
+        }
+      ]
+    },
+    "expect": {
+      "impact": 0.536445186681,
+      "hit": true
+    }
+  },
+  {
+    "name": "negative-weight-zeroed",
+    "args": {
+      "edges": [
+        {
+          "scoreFrom": 0.9,
+          "scoreTo": 0.3,
+          "weight": -1,
+          "edgeType": "prerequisite",
+          "freq": 3
+        }
+      ]
+    },
+    "expect": {
+      "impact": 0,
+      "hit": false
+    }
+  },
+  {
+    "name": "batch-mixed",
+    "args": {
+      "edges": [
+        {
+          "scoreFrom": 0.9,
+          "scoreTo": 0.3,
+          "weight": 1,
+          "edgeType": "prerequisite",
+          "freq": 4,
+          "downstreamCount": 2
+        },
+        {
+          "scoreFrom": 0.4,
+          "scoreTo": 0.45,
+          "weight": 0.8,
+          "edgeType": "transferGap",
+          "freq": 1
+        },
+        {
+          "scoreFrom": 0.7,
+          "scoreTo": 0.7,
+          "weight": 1.2,
+          "edgeType": "prerequisite",
+          "freq": 0
+        }
+      ]
+    },
+    "expect": [
+      {
+        "impact": 0.551112442084,
+        "hit": true
+      },
+      {
+        "impact": 0.0740105645378,
+        "hit": false
+      },
+      {
+        "impact": 0,
+        "hit": false
+      }
+    ]
+  },
+  {
+    "name": "all-mid-neutral",
+    "args": {
+      "edges": [
+        {
+          "scoreFrom": 0.55,
+          "scoreTo": 0.5,
+          "weight": 1,
+          "edgeType": "prerequisite",
+          "freq": 1
+        }
+      ]
+    },
+    "expect": {
+      "impact": 0.145124618986,
+      "hit": true
+    }
+  },
+  {
+    "name": "extreme-weak-parent",
+    "args": {
+      "edges": [
+        {
+          "scoreFrom": 0,
+          "scoreTo": 0,
+          "weight": 1,
+          "edgeType": "prerequisite",
+          "freq": 2
+        }
+      ]
+    },
+    "expect": {
+      "impact": 0.00712639054505,
+      "hit": false
+    }
+  }
+]

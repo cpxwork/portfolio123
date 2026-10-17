@@ -167,6 +167,9 @@ function makeStateModel(fields) {
 /**
  * createCaptureScheduler —— 采集策略的可注入实现（假时钟驱动，测试用）
  *
+ * 时钟契约（全项目统一）：opts.nowFn 返回 epoch 毫秒数（number），不是 Date；
+ * opts.setTimeoutFn / opts.clearTimeoutFn 为可注入定时器；notifySent(at) 的 at 同样传毫秒数。
+ *
  * 策略：
  *   - 常规：每 pollIntervalMs 抓 1 帧（单帧）
  *   - 提醒后：notifySent 之后 postNotifyMs 补抓 1 次（单帧）
@@ -175,7 +178,7 @@ function makeStateModel(fields) {
  */
 function createCaptureScheduler(opts) {
   const options = opts || {};
-  const nowFn = options.nowFn || (() => new Date());
+  const nowFn = options.nowFn || (() => Date.now());
   const pollIntervalMs = options.pollIntervalMs || POLL_INTERVAL_MS;
   const postNotifyMs = options.postNotifyMs || POST_NOTIFY_DELAY_MS;
   const burstIntervalMs = options.burstIntervalMs || BURST_INTERVAL_MS;
@@ -223,7 +226,7 @@ function createCaptureScheduler(opts) {
    */
   function poll(lastResult) {
     const now = nowFn();
-    if (lastPollAt !== null && now.getTime() - lastPollAt.getTime() < pollIntervalMs) return null;
+    if (lastPollAt !== null && now - lastPollAt < pollIntervalMs) return null;
     lastPollAt = now;
     if (needBurst(lastResult)) {
       return { reason: 'poll_burst', frames: burstFrames, intervalMs: burstIntervalMs };
@@ -233,7 +236,7 @@ function createCaptureScheduler(opts) {
 
   /** 提醒已发出（事件触发采样点） */
   function notifySent(at) {
-    notifySentAt = at || nowFn();
+    notifySentAt = typeof at === 'number' ? at : nowFn();
     postNotifyDone = false;
   }
 
@@ -244,7 +247,7 @@ function createCaptureScheduler(opts) {
   function postNotify(lastResult) {
     if (notifySentAt === null) return null;
     const now = nowFn();
-    if (now.getTime() - notifySentAt.getTime() < postNotifyMs) return null;
+    if (now - notifySentAt < postNotifyMs) return null;
     if (postNotifyDone) return null;
     postNotifyDone = true;
     if (needBurst(lastResult)) {
@@ -255,8 +258,8 @@ function createCaptureScheduler(opts) {
 
   function state() {
     return {
-      lastPollAt: lastPollAt ? isoOffset(lastPollAt) : null,
-      notifySentAt: notifySentAt ? isoOffset(notifySentAt) : null,
+      lastPollAt: lastPollAt ? isoOffset(new Date(lastPollAt)) : null,
+      notifySentAt: notifySentAt ? isoOffset(new Date(notifySentAt)) : null,
       postNotifyDone,
       pollIntervalMs,
       postNotifyMs,
@@ -586,7 +589,8 @@ function ruleKey(ctx) {
  *   captureFrame: async () => ({ ok:true, frame } | { ok:false, reason })
  *   inferPose:    async (frames) => ({ person, posture, zone, confidence, quality })
  *   context:      () => ({ inactiveMin, locked })   当前活跃度/锁屏快照（可注入）
- *   clock:        { now, setTimeout, clearTimeout } 可注入假时钟
+ *   clock:        { now: () => number, setTimeout, clearTimeout } 可注入假时钟
+ *                 （全项目时钟契约统一：now 返回 epoch 毫秒数，不是 Date）
  *   fixturesDir:  假后端使用的 fixtures 目录（可选）
  *   corrections:  初始纠正表（可选，便于测试注入）
  */
@@ -603,7 +607,7 @@ function createStateSensor(opts) {
   const inferPose = options.inferPose;
   const contextFn = typeof options.context === 'function' ? options.context : () => ({ inactiveMin: 0, locked: false });
   const clock = options.clock || {};
-  const nowFn = clock.now || (() => new Date());
+  const nowFn = clock.now || (() => Date.now());
   const setTimeoutFn = clock.setTimeout || setTimeout;
   const clearTimeoutFn = clock.clearTimeout || clearTimeout;
   const sleepFn = options.sleepFn || sleep;
@@ -616,7 +620,7 @@ function createStateSensor(opts) {
       corrections.set(k, {
         state: c.state,
         note: c.note || '',
-        at: c.at || isoOffset(nowFn()),
+        at: c.at || isoOffset(new Date(nowFn())),
         count: Number(c.count || 1)
       });
     }
@@ -743,7 +747,7 @@ function createStateSensor(opts) {
     return {
       inactiveMin: Number(c.inactiveMin || 0),
       locked: !!c.locked,
-      hour: typeof c.hour === 'number' ? c.hour : hourOf(nowFn())
+      hour: typeof c.hour === 'number' ? c.hour : hourOf(new Date(nowFn()))
     };
   }
 
@@ -755,7 +759,7 @@ function createStateSensor(opts) {
   async function estimate(req) {
     const r = req || {};
     const ctx = currentContext();
-    const capturedAt = isoOffset(nowFn());
+    const capturedAt = isoOffset(new Date(nowFn()));
 
     let sample;
     const wantFrames = Math.min(MAX_BURST_FRAMES, Math.max(1, r.frames || 1));
@@ -819,7 +823,7 @@ function createStateSensor(opts) {
     const entry = {
       state,
       note: note || '',
-      at: isoOffset(nowFn()),
+      at: isoOffset(new Date(nowFn())),
       count: prev ? prev.count + 1 : 1,
       ruleKey: key
     };
@@ -830,7 +834,7 @@ function createStateSensor(opts) {
       confidence: 1,
       evidence: 'manual:用户纠正为' + (STATE_TEXT[state] || state) +
         (note ? '（' + note + '）' : '') + ' | 场景:' + key,
-      capturedAt: isoOffset(nowFn()),
+      capturedAt: isoOffset(new Date(nowFn())),
       source: 'manual',
       explain: '用户手动纠正为「' + (STATE_TEXT[state] || state) + '」' +
         (note ? '，备注：' + note : '') + '；该场景已记入规则修正表'

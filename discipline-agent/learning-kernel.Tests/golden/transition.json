@@ -1,0 +1,299 @@
+[
+  {
+    "name": "first-perfect",
+    "args": {
+      "attempt": {
+        "correct": true,
+        "accuracy": 1,
+        "selfConf": 5
+      }
+    },
+    "expect": {
+      "status": "Repairing",
+      "streak": 1,
+      "attempts": 1,
+      "weightedScorePct": 100,
+      "cleared": false
+    }
+  },
+  {
+    "name": "first-fail",
+    "args": {
+      "attempt": {
+        "correct": false,
+        "accuracy": 0.5,
+        "selfConf": 2
+      }
+    },
+    "expect": {
+      "status": "Repairing",
+      "streak": 0,
+      "attempts": 1,
+      "weightedScorePct": 47,
+      "cleared": false
+    }
+  },
+  {
+    "name": "acc-ok-conf-low",
+    "args": {
+      "attempt": {
+        "correct": true,
+        "accuracy": 0.9,
+        "selfConf": 2
+      }
+    },
+    "expect": {
+      "status": "Repairing",
+      "streak": 0,
+      "attempts": 1,
+      "weightedScorePct": 75,
+      "cleared": false
+    }
+  },
+  {
+    "name": "weighted-ok-acc-low",
+    "args": {
+      "attempt": {
+        "correct": true,
+        "accuracy": 0.6,
+        "selfConf": 5
+      }
+    },
+    "expect": {
+      "status": "Repairing",
+      "streak": 0,
+      "attempts": 1,
+      "weightedScorePct": 72,
+      "cleared": false
+    }
+  },
+  {
+    "name": "cleared-on-third",
+    "args": {
+      "state": {
+        "status": "open",
+        "streak": 1,
+        "attempts": 2
+      },
+      "attempt": {
+        "correct": true,
+        "accuracy": 0.9,
+        "selfConf": 4
+      }
+    },
+    "expect": {
+      "status": "Cleared",
+      "streak": 2,
+      "attempts": 3,
+      "weightedScorePct": 87,
+      "cleared": true
+    }
+  },
+  {
+    "name": "streak-2-but-attempts-2",
+    "args": {
+      "state": {
+        "status": "repairing",
+        "streak": 1,
+        "attempts": 1
+      },
+      "attempt": {
+        "correct": true,
+        "accuracy": 0.9,
+        "selfConf": 4
+      }
+    },
+    "expect": {
+      "status": "Repairing",
+      "streak": 2,
+      "attempts": 2,
+      "weightedScorePct": 87,
+      "cleared": false
+    }
+  },
+  {
+    "name": "cleared-idempotent",
+    "args": {
+      "state": {
+        "status": "cleared",
+        "streak": 2,
+        "attempts": 3
+      },
+      "attempt": {
+        "correct": false,
+        "accuracy": 0.1,
+        "selfConf": 1
+      }
+    },
+    "expect": {
+      "status": "Cleared",
+      "streak": 2,
+      "attempts": 3,
+      "weightedScorePct": 0,
+      "cleared": true
+    }
+  },
+  {
+    "name": "streak-reset-on-fail",
+    "args": {
+      "state": {
+        "status": "repairing",
+        "streak": 1,
+        "attempts": 5
+      },
+      "attempt": {
+        "correct": false,
+        "accuracy": 0.4,
+        "selfConf": 2
+      }
+    },
+    "expect": {
+      "status": "Repairing",
+      "streak": 0,
+      "attempts": 6,
+      "weightedScorePct": 40,
+      "cleared": false
+    }
+  },
+  {
+    "name": "exact-bar-acc0.7-conf3",
+    "args": {
+      "attempt": {
+        "correct": true,
+        "accuracy": 0.7,
+        "selfConf": 3
+      }
+    },
+    "expect": {
+      "status": "Repairing",
+      "streak": 1,
+      "attempts": 1,
+      "weightedScorePct": 67,
+      "cleared": false
+    }
+  },
+  {
+    "name": "probe-empty",
+    "args": {
+      "mode": "probe",
+      "history": []
+    },
+    "expect": {
+      "mode": "probe",
+      "saleable": false,
+      "streak": 0,
+      "need": "再完成 2 次达标小测（acc≥0.7 且 conf≥3）"
+    }
+  },
+  {
+    "name": "probe-two-pass",
+    "args": {
+      "mode": "probe",
+      "history": [
+        {
+          "acc": 0.8,
+          "conf": 4
+        },
+        {
+          "acc": 0.85,
+          "conf": 4
+        }
+      ]
+    },
+    "expect": {
+      "mode": "probe",
+      "saleable": true,
+      "streak": 2,
+      "need": null
+    }
+  },
+  {
+    "name": "probe-broken-streak",
+    "args": {
+      "mode": "probe",
+      "history": [
+        {
+          "acc": 0.8,
+          "conf": 4
+        },
+        {
+          "acc": 0.5,
+          "conf": 4
+        }
+      ]
+    },
+    "expect": {
+      "mode": "probe",
+      "saleable": false,
+      "streak": 0,
+      "need": "再完成 2 次达标小测（acc≥0.7 且 conf≥3）"
+    }
+  },
+  {
+    "name": "probe-three-pass",
+    "args": {
+      "mode": "probe",
+      "history": [
+        {
+          "acc": 0.8,
+          "conf": 4
+        },
+        {
+          "acc": 0.8,
+          "conf": 4
+        },
+        {
+          "acc": 0.8,
+          "conf": 4
+        }
+      ]
+    },
+    "expect": {
+      "mode": "probe",
+      "saleable": true,
+      "streak": 3,
+      "need": null
+    }
+  },
+  {
+    "name": "probe-one-pass",
+    "args": {
+      "mode": "probe",
+      "history": [
+        {
+          "acc": 0.8,
+          "conf": 4
+        }
+      ]
+    },
+    "expect": {
+      "mode": "probe",
+      "saleable": false,
+      "streak": 1,
+      "need": "再完成 1 次达标小测（acc≥0.7 且 conf≥3）"
+    }
+  },
+  {
+    "name": "cleared-idempotent-pct-check",
+    "args": {
+      "state": {
+        "status": "cleared",
+        "streak": 2,
+        "attempts": 3,
+        "weightedScorePct": 90
+      },
+      "attempt": {
+        "correct": true,
+        "accuracy": 0.8,
+        "selfConf": 4
+      }
+    },
+    "expect": {
+      "status": "Cleared",
+      "streak": 2,
+      "attempts": 3,
+      "weightedScorePct": 90,
+      "cleared": true
+    }
+  }
+]

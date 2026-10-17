@@ -1,0 +1,274 @@
+[
+  {
+    "name": "no-records",
+    "args": {
+      "attempts": 0,
+      "successes": 0,
+      "confidence": 3,
+      "lastAgeDays": 0,
+      "streak": 0
+    },
+    "expect": {
+      "score": 0.6575,
+      "emp": 0.5,
+      "know": 0.515,
+      "stability": 2.93321698785,
+      "retention": 1,
+      "prereqSupport": 0.5,
+      "prereqCeiling": 1,
+      "degraded": true
+    }
+  },
+  {
+    "name": "baseline-6of8",
+    "args": {
+      "attempts": 8,
+      "successes": 6,
+      "confidence": 4,
+      "lastAgeDays": 2,
+      "streak": 2
+    },
+    "expect": {
+      "score": 0.695553636031,
+      "emp": 0.722222222222,
+      "know": 0.733888888889,
+      "stability": 7.35920418559,
+      "retention": 0.762030638623,
+      "prereqSupport": 0.5,
+      "prereqCeiling": 1,
+      "degraded": true
+    }
+  },
+  {
+    "name": "with-prereqs",
+    "args": {
+      "attempts": 8,
+      "successes": 6,
+      "confidence": 4,
+      "lastAgeDays": 2,
+      "streak": 2,
+      "prereqScores": [
+        0.9,
+        0.3
+      ]
+    },
+    "expect": {
+      "score": 0.676553636031,
+      "emp": 0.722222222222,
+      "know": 0.733888888889,
+      "stability": 7.35920418559,
+      "retention": 0.762030638623,
+      "prereqSupport": 0.405,
+      "prereqCeiling": 0.685,
+      "degraded": false
+    }
+  },
+  {
+    "name": "all-perfect",
+    "args": {
+      "attempts": 10,
+      "successes": 10,
+      "confidence": 5,
+      "lastAgeDays": 0,
+      "streak": 10
+    },
+    "expect": {
+      "score": 0.880681818182,
+      "emp": 0.954545454545,
+      "know": 0.961363636364,
+      "stability": 21.9927650002,
+      "retention": 1,
+      "prereqSupport": 0.5,
+      "prereqCeiling": 1,
+      "degraded": true
+    }
+  },
+  {
+    "name": "all-failed",
+    "args": {
+      "attempts": 5,
+      "successes": 0,
+      "confidence": 1,
+      "lastAgeDays": 5,
+      "streak": 0
+    },
+    "expect": {
+      "score": 0.225794228582,
+      "emp": 0.0833333333333,
+      "know": 0.100833333333,
+      "stability": 3.61984966827,
+      "retention": 0.251258539719,
+      "prereqSupport": 0.5,
+      "prereqCeiling": 1,
+      "degraded": true
+    }
+  },
+  {
+    "name": "successes-clamped-to-attempts",
+    "args": {
+      "attempts": 5,
+      "successes": 10,
+      "confidence": 5,
+      "lastAgeDays": 1,
+      "streak": 3
+    },
+    "expect": {
+      "score": 0.831310780547,
+      "emp": 0.916666666667,
+      "know": 0.929166666667,
+      "stability": 8.50664672043,
+      "retention": 0.889091490714,
+      "prereqSupport": 0.5,
+      "prereqCeiling": 1,
+      "degraded": true
+    }
+  },
+  {
+    "name": "negative-age-clamped",
+    "args": {
+      "attempts": 4,
+      "successes": 3,
+      "confidence": 4,
+      "lastAgeDays": -7,
+      "streak": 2
+    },
+    "expect": {
+      "score": 0.7575,
+      "emp": 0.7,
+      "know": 0.715,
+      "stability": 6.66120752102,
+      "retention": 1,
+      "prereqSupport": 0.5,
+      "prereqCeiling": 1,
+      "degraded": true
+    }
+  },
+  {
+    "name": "confidence-clamped-high",
+    "args": {
+      "attempts": 6,
+      "successes": 5,
+      "confidence": 9,
+      "lastAgeDays": 1,
+      "streak": 1
+    },
+    "expect": {
+      "score": 0.758115023583,
+      "emp": 0.785714285714,
+      "know": 0.817857142857,
+      "stability": 5.38848107258,
+      "retention": 0.83062150718,
+      "prereqSupport": 0.5,
+      "prereqCeiling": 1,
+      "degraded": true
+    }
+  },
+  {
+    "name": "confidence-clamped-low",
+    "args": {
+      "attempts": 6,
+      "successes": 5,
+      "confidence": -2,
+      "lastAgeDays": 1,
+      "streak": 1
+    },
+    "expect": {
+      "score": 0.683115023583,
+      "emp": 0.785714285714,
+      "know": 0.667857142857,
+      "stability": 5.38848107258,
+      "retention": 0.83062150718,
+      "prereqSupport": 0.5,
+      "prereqCeiling": 1,
+      "degraded": true
+    }
+  },
+  {
+    "name": "single-failure",
+    "args": {
+      "attempts": 1,
+      "successes": 0,
+      "confidence": 2,
+      "lastAgeDays": 1,
+      "streak": 0
+    },
+    "expect": {
+      "score": 0.449584181115,
+      "emp": 0.25,
+      "know": 0.2725,
+      "stability": 2.93321698785,
+      "retention": 0.71111393705,
+      "prereqSupport": 0.5,
+      "prereqCeiling": 1,
+      "degraded": true
+    }
+  },
+  {
+    "name": "ceiling-binds",
+    "args": {
+      "attempts": 12,
+      "successes": 12,
+      "confidence": 5,
+      "lastAgeDays": 0,
+      "streak": 5,
+      "prereqScores": [
+        0.1
+      ]
+    },
+    "expect": {
+      "score": 0.595,
+      "emp": 0.961538461538,
+      "know": 0.967307692308,
+      "stability": 13.3350533823,
+      "retention": 1,
+      "prereqSupport": 0.1,
+      "prereqCeiling": 0.595,
+      "degraded": false
+    }
+  },
+  {
+    "name": "prereq-perfect",
+    "args": {
+      "attempts": 6,
+      "successes": 4,
+      "confidence": 3,
+      "lastAgeDays": 3,
+      "streak": 1,
+      "prereqScores": [
+        1,
+        1,
+        1
+      ]
+    },
+    "expect": {
+      "score": 0.690136014998,
+      "emp": 0.642857142857,
+      "know": 0.636428571429,
+      "stability": 5.38848107258,
+      "retention": 0.573072430945,
+      "prereqSupport": 1,
+      "prereqCeiling": 1,
+      "degraded": false
+    }
+  },
+  {
+    "name": "long-forgetting",
+    "args": {
+      "attempts": 8,
+      "successes": 8,
+      "confidence": 4,
+      "lastAgeDays": 60,
+      "streak": 2
+    },
+    "expect": {
+      "score": 0.561475245233,
+      "emp": 0.944444444444,
+      "know": 0.922777777778,
+      "stability": 7.35920418559,
+      "retention": 0.000287854481488,
+      "prereqSupport": 0.5,
+      "prereqCeiling": 1,
+      "degraded": true
+    }
+  }
+]

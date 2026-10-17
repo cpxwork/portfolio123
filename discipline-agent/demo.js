@@ -92,7 +92,7 @@ function makeStubTransport() {
         level: atTop ? 'L4' : lv,
         suspend: false,
         revoke: false,
-        reason: atTop ? '已到 L4 顶，等用户完成步骤' : '用户还没响应，升到 ' + lv
+        reason: atTop ? 'L4 已执行，等用户完成步骤' : '用户还没响应，升到 ' + lv
       };
     }
   };
@@ -173,8 +173,8 @@ async function main() {
     captureFrame: backend.captureFrame,
     inferPose,
     context: backend.context,
-    // clock.now 约定返回 Date（state-sensor 内部要取 +08:00 小时），不能返回 number
-    clock: { now: () => new Date(), setTimeout, clearTimeout },
+    // 全项目时钟契约：clock.now 返回 epoch 毫秒数（需要 Date 处由内部显式转换）
+    clock: { now: () => Date.now(), setTimeout, clearTimeout },
     sleepFn: (ms) => new Promise(r => setTimeout(r, ms))
   });
 

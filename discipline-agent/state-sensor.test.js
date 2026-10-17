@@ -167,7 +167,7 @@ atest('captureFrame 返回 null → 走降级', async () => {
     captureFrame: async () => null,
     inferPose: backend.inferPose,
     context: () => ({ inactiveMin: 30, locked: true }),
-    clock: { now: () => new Date('2026-10-16T11:00:00+08:00') }
+    clock: { now: () => new Date('2026-10-16T11:00:00+08:00').getTime() }
   });
   const model = await sensor.estimate({ frames: 1 });
   equal(model.source, 'time_rules', 'null 帧降级');
@@ -214,7 +214,7 @@ atest('连拍中途掉帧 → 部分折叠而非整批降级', async () => {
     captureFrame: backend.captureFrame,
     inferPose: backend.inferPose,
     context: () => ({ inactiveMin: 18, locked: false }),
-    clock: { now: () => new Date('2026-10-16T07:42:00+08:00') },
+    clock: { now: () => new Date('2026-10-16T07:42:00+08:00').getTime() },
     sleepFn: () => Promise.resolve()
   });
   const model = await sensor.estimate({ frames: 3, intervalMs: 1 });
@@ -446,7 +446,7 @@ atest('初始 corrections 可注入（A-M5 审计写回）', async () => {
     captureFrame: backend.captureFrame,
     inferPose: backend.inferPose,
     context: () => ({ inactiveMin: 30, locked: false }),
-    clock: { now: () => new Date('2026-10-16T23:30:00+08:00') },
+    clock: { now: () => new Date('2026-10-16T23:30:00+08:00').getTime() },
     corrections: { '夜间/unlock/ge25': { state: 'away', note: '上次纠正' } }
   });
   const model = await sensor.estimate({ frames: 1 });

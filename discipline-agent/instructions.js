@@ -16,32 +16,39 @@ const ACTIONS = Object.freeze([
   'notify',
   'popup_countdown',
   'spawn_bugs',
+  'screen_flash',
   'shuffle_desktop',
   'quarantine_files',
   'revoke_all'
 ]);
 
-/** level ↔ action 映射（契约定死，见 6.1） */
+/**
+ * level ↔ action 映射（契约见 6.1；2026-10-17 用户指示变更）：
+ * 新增整机闪屏 screen_flash 插入 L3，原 L3/L4（shuffle/quarantine）顺移为 L4/L5；
+ * 升级"顺序"本身可由 strategist 模型按用户性格编排（模型选 level，映射不变）。
+ */
 const LEVEL_ACTION = Object.freeze({
   L0: 'notify',
   L1: 'popup_countdown',
   L2: 'spawn_bugs',
-  L3: 'shuffle_desktop',
-  L4: 'quarantine_files'
+  L3: 'screen_flash',
+  L4: 'shuffle_desktop',
+  L5: 'quarantine_files'
 });
 const ACTION_LEVEL = Object.freeze({
   notify: 'L0',
   popup_countdown: 'L1',
   spawn_bugs: 'L2',
-  shuffle_desktop: 'L3',
-  quarantine_files: 'L4',
+  screen_flash: 'L3',
+  shuffle_desktop: 'L4',
+  quarantine_files: 'L5',
   revoke_all: null
 });
 
-/** 本地执行动作（executor 负责）；其余是前端表现动作 */
+/** 本地执行动作（executor 负责）；其余是前端表现动作（screen_flash 整机闪屏由 B 侧前端全屏渲染，A 侧不做本地执行） */
 const LOCAL_ACTIONS = Object.freeze(['shuffle_desktop', 'quarantine_files', 'revoke_all']);
 
-const LEVELS = Object.freeze(['L0', 'L1', 'L2', 'L3', 'L4']);
+const LEVELS = Object.freeze(['L0', 'L1', 'L2', 'L3', 'L4', 'L5']);
 const STATES = Object.freeze(['lying_bed', 'seated_desk', 'standing_or_moving', 'away', 'learning', 'unknown']);
 const SOURCES = Object.freeze(['camera_local', 'time_rules', 'manual']);
 
@@ -101,10 +108,10 @@ function validateInstruction(instruction, opts) {
   // level（revoke_all 允许 null；其余必须与 action 对应）
   if (ins.action === 'revoke_all') {
     if (ins.level !== null && ins.level !== undefined && LEVELS.indexOf(ins.level) === -1) {
-      errors.push('level 必须是 L0..L4 或 null，实际: ' + JSON.stringify(ins.level));
+      errors.push('level 必须是 L0..L5 或 null，实际: ' + JSON.stringify(ins.level));
     }
   } else if (LEVELS.indexOf(ins.level) === -1) {
-    errors.push('level 必须是 L0..L4 之一，实际: ' + JSON.stringify(ins.level));
+    errors.push('level 必须是 L0..L5 之一，实际: ' + JSON.stringify(ins.level));
   } else if (LEVEL_ACTION[ins.level] !== ins.action) {
     errors.push('level ' + ins.level + ' 必须对应 action ' + LEVEL_ACTION[ins.level] + '，实际 action: ' + ins.action);
   }
@@ -180,6 +187,12 @@ function validateInstruction(instruction, opts) {
       if (ins.payload.targetDir !== undefined && (typeof ins.payload.targetDir !== 'string' || !ins.payload.targetDir.trim())) {
         errors.push('shuffle_desktop 的 payload.targetDir 必须是非空字符串');
       }
+    } else if (ins.action === 'screen_flash') {
+      for (const k of ['rounds', 'intervalMs']) {
+        if (ins.payload[k] !== undefined && (!Number.isInteger(ins.payload[k]) || ins.payload[k] <= 0)) {
+          errors.push('screen_flash 的 payload.' + k + ' 必须是正整数');
+        }
+      }
     }
   } else if (ins.action === 'quarantine_files') {
     errors.push('quarantine_files 必须带 payload.targets');
@@ -225,12 +238,12 @@ function normalizeInstruction(ins, opts) {
  * createInstructionBus —— 指令总线
  * @param {object} opts
  * @param {string} [opts.logPath] JSONL 审计日志路径（默认 os.tmpdir()/discipline-agent-audit/audit.jsonl）
- * @param {() => Date} [opts.nowFn] 可注入时钟
+ * @param {() => number} [opts.nowFn] 可注入时钟（epoch 毫秒数，全项目统一契约）
  */
 function createInstructionBus(opts) {
   const options = opts || {};
   const logPath = options.logPath || path.join(os.tmpdir(), 'discipline-agent-audit', 'audit.jsonl');
-  const nowFn = options.nowFn || (() => new Date());
+  const nowFn = options.nowFn || (() => Date.now());
   const logDir = path.dirname(logPath);
   fs.mkdirSync(logDir, { recursive: true });
 
@@ -241,7 +254,7 @@ function createInstructionBus(opts) {
   const revoked = new Set();
 
   function appendAudit(entry) {
-    const line = JSON.stringify(Object.assign({ ts: isoWithOffset(nowFn()) }, entry)) + '\n';
+    const line = JSON.stringify(Object.assign({ ts: isoWithOffset(new Date(nowFn())) }, entry)) + '\n';
     fs.appendFileSync(logPath, line, 'utf8');
     return entry;
   }
@@ -253,7 +266,7 @@ function createInstructionBus(opts) {
 
   /** issue：幂等去重（同 id 重复 issue 返回已存在指令，不重复记审计） */
   function issue(input) {
-    const ins = normalizeInstruction(input, { now: nowFn() });
+    const ins = normalizeInstruction(input, { now: new Date(nowFn()) });
     if (issued.has(ins.id)) {
       const existing = issued.get(ins.id);
       appendAudit({ event: 'issue_duplicate', id: ins.id, action: ins.action, level: ins.level, taskId: ins.taskId });
@@ -283,7 +296,7 @@ function createInstructionBus(opts) {
     acked.add(id);
     rec.status = 'acked';
     rec.history.push('acked');
-    rec.ackedAt = isoWithOffset(nowFn());
+    rec.ackedAt = isoWithOffset(new Date(nowFn()));
     appendAudit({ event: 'ack', id, action: rec.action, level: rec.level, taskId: rec.taskId, info: ackInfo || null });
     return rec;
   }
@@ -294,7 +307,7 @@ function createInstructionBus(opts) {
     completed.add(id);
     rec.status = 'completed';
     rec.history.push('completed');
-    rec.completedAt = isoWithOffset(nowFn());
+    rec.completedAt = isoWithOffset(new Date(nowFn()));
     appendAudit({ event: 'complete', id, action: rec.action, level: rec.level, taskId: rec.taskId, result: result || null });
     return rec;
   }
@@ -310,7 +323,7 @@ function createInstructionBus(opts) {
       revoked.add(id);
       rec.status = 'revoked';
       rec.history.push('revoked');
-      rec.revokedAt = isoWithOffset(nowFn());
+      rec.revokedAt = isoWithOffset(new Date(nowFn()));
       revokedNow.push(id);
       appendAudit({ event: 'revoke', id, action: rec.action, level: rec.level, taskId: rec.taskId, reason: reason || null });
     }
