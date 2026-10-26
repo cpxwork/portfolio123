@@ -175,6 +175,17 @@ def strict_funnel(events, assigned_at, window=7*86400):
     return list({(p['user'], p['session'], p['order_id']):p for p in paths}.values())
 
 
+def canonical_output(value):
+    """Keep 12 significant digits so libm's final-bit differences do not alter artifacts."""
+    if isinstance(value, float):
+        return float(format(value, '.12g'))
+    if isinstance(value, dict):
+        return {key: canonical_output(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [canonical_output(item) for item in value]
+    return value
+
+
 def evaluate():
     data = json.loads((ROOT/'fixtures.json').read_text(encoding='utf-8'))
     retriever = Retriever(data['documents'])
@@ -199,9 +210,9 @@ def evaluate():
             got = 'rejected'
         trajectories.append({'id':case['id'],'scenario':case['scenario'],'expected':case['expected'],'passed':got==case['expected'],**result})
     growth = [dict(name=name,**experiment(**counts)) for name,counts in data['experiments'].items()]
-    result = {'scope':'synthetic fixtures; ReAct-style orchestration with scripted decisions; lexical retrieval, no LLM benchmark',
+    result = canonical_output({'scope':'synthetic fixtures; ReAct-style orchestration with scripted decisions; lexical retrieval, no LLM benchmark',
               'fixture_sha256':hashlib.sha256((ROOT/'fixtures.json').read_bytes()).hexdigest(),
-              'retrieval':retrieval,'agent':trajectories,'growth':growth}
+              'retrieval':retrieval,'agent':trajectories,'growth':growth})
     target = ROOT/'results'
     target.mkdir(exist_ok=True)
     (target/'report.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n',encoding='utf-8',newline='\n')

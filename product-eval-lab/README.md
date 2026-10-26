@@ -39,6 +39,8 @@ python build_dashboard.py
 
 所有查询和相关性标签均为本项目编写，指标反映这组小样本上的表现，不代表真实客户数据、模型准确率或外部盲测。报告保留逐条结果及错误，固定输入文件的 SHA-256 用于核对版本。
 
+报告序列化保留 12 位有效数字，以消除跨操作系统数学库末位舍入差异；原始计算使用 Python 浮点运算，CI 仍要求生成物与提交结果完全一致。
+
 ## 论文与实现范围
 
 Yao et al., *ReAct: Synergizing Reasoning and Acting in Language Models*, ICLR 2023. [论文](https://arxiv.org/abs/2210.03629) / [作者实现](https://github.com/ysymyth/ReAct)。本项目独立编写工具编排与测试，没有复制作者代码，也未复跑 HotpotQA、FEVER、ALFWorld 或 WebShop。
