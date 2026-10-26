@@ -1,0 +1,36 @@
+"""Build a portable report from the measured JSON; no network or external assets."""
+import json
+from pathlib import Path
+
+ROOT=Path(__file__).resolve().parent
+data=json.loads((ROOT/'results/report.json').read_text(encoding='utf-8'))
+payload=json.dumps(data,ensure_ascii=False).replace('<','\\u003c')
+template='''<!doctype html>
+<html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Product Evaluation Lab · 陈鹏旭</title>
+<style>
+:root{--ink:#142838;--muted:#627480;--line:#dbe4e7;--paper:#f4f7f6;--teal:#137a77;--orange:#ad5c31}*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.65 system-ui,"Microsoft YaHei",sans-serif}header{background:#142838;color:#fff;padding:55px max(6vw,24px) 45px}.eyebrow{font-size:12px;letter-spacing:.18em;color:#91d3c8}h1{font-size:clamp(30px,4vw,52px);line-height:1.18;margin:14px 0}header p{max-width:750px;color:#c0d0d6}main{max-width:1200px;margin:auto;padding:28px 24px 60px}.nav{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px}.nav a{color:var(--teal);text-decoration:none;border:1px solid var(--line);border-radius:22px;padding:7px 18px;background:#fff}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.card,section{background:#fff;border:1px solid var(--line);border-radius:18px;padding:26px;margin-bottom:22px}.card b{display:block;font-size:30px;color:var(--teal)}h2{font-size:25px;margin:0 0 12px}h3{font-size:16px;margin:16px 0 8px}.note{color:var(--muted);font-size:13px}.tag{display:inline-block;background:#e6f3ee;padding:3px 9px;color:var(--teal);font-size:12px;border-radius:5px}label{display:block;margin:16px 0 8px;font-weight:600}select{padding:10px 12px;border:1px solid var(--line);border-radius:8px;color:var(--ink);background:white;min-width:280px;font:inherit}table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;padding:11px 9px;border-bottom:1px solid var(--line);vertical-align:top}th{background:#f0f6f3}pre{background:#132b3a;color:#dceae8;padding:18px;border-radius:10px;overflow:auto;font:12px/1.6 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere}.scroll{overflow:auto}.metrics{display:flex;gap:28px;flex-wrap:wrap;margin:18px 0}.metrics b{font-size:25px;display:block;color:var(--teal)}.bar{height:10px;max-width:400px;background:#e9efed;border-radius:8px;margin:6px 0}.bar i{display:block;height:100%;background:var(--teal);border-radius:8px}footer{color:var(--muted);font-size:12px;margin-top:25px}a{color:var(--teal)}.warn{color:var(--orange)}@media(max-width:750px){.grid{grid-template-columns:1fr}.card,section{padding:18px}select{width:100%;min-width:0}h2{font-size:22px}}
+</style>
+<header><div class="eyebrow">CHEN PENGXU / PRODUCT ENGINEERING</div><h1>Product Evaluation Lab</h1><p>从检索证据、工具执行到实验决策。用逐条结果和可追溯的执行轨迹，解释一个 AI 产品为什么可信、哪里还会出错。</p><span class="tag">离线可复跑 · Python 标准库 · 固定输入</span></header>
+<main><nav class="nav"><a href="#retrieval">检索对照</a><a href="#agent">Agent 轨迹</a><a href="#growth">实验分析</a><a href="README.md">实现与论文</a></nav>
+<div class="grid"><div class="card"><b>12</b>人工查询 / 三种检索配置</div><div class="card"><b>8</b>工具执行与拒绝轨迹</div><div class="card"><b>4</b>合成实验分析场景</div></div>
+<section id="retrieval"><h2>01 / 找到证据，仍要检查版本</h2><p>同一组查询，对照词项覆盖、BM25 与版本过滤。全部相关性标签人工编写；分数仅描述这组固定样例。</p><div class="scroll"><table><thead><tr><th>配置</th><th>Recall@3</th><th>MRR@3</th><th>nDCG@3</th></tr></thead><tbody id="retrieval-summary"></tbody></table></div><label for="variant">查看配置与逐条排序</label><select id="variant"></select><div class="scroll"><table><thead><tr><th>查询</th><th>相关文档</th><th>实际排序</th><th>MRR@3</th></tr></thead><tbody id="query-rows"></tbody></table></div><p class="note">BM25 在本组样例中并非所有指标都优于简单词项覆盖。旧版政策保留为干扰项；版本过滤使用显式元数据。</p></section>
+<section id="agent"><h2>02 / 动作、观察与有依据的交付</h2><p>以 ReAct 为机制参考，执行 search / read / finish 工具闭环。默认决策为脚本轨迹，检查预算、引用和工具边界；可选模型接口见 live.py。</p><label for="trajectory">查看执行轨迹与拒绝原因</label><select id="trajectory"></select><div id="agent-status"></div><pre id="trace"></pre><p class="note">8 条合同检查的通过数不等于语言模型成功率。最终回答限定为已读取文档的原文摘录。</p></section>
+<section id="growth"><h2>03 / 显著性之后，还有护栏</h2><p>固定分析时点、账号稳定分流、转化率差值与置信区间、退款率和分流异常分开呈现。以下均为合成数据。</p><label for="experiment">选择分析场景</label><select id="experiment"></select><div class="metrics" id="growth-metrics"></div><pre id="growth-detail"></pre><p class="note">低计数不使用正态近似下结论；分流异常阻断解释。退款率独立呈现，analysis_ready 表示统计输出可读，不表示应上线。</p></section>
+<footer>论文参考：<a href="https://arxiv.org/abs/2210.03629">ReAct · ICLR 2023</a> / <a href="https://arxiv.org/abs/2005.11401">RAG · NeurIPS 2020</a>。本项目为机制实践与产品评测，不是原论文完整基准复现。<br>固定输入 SHA-256：<span id="hash"></span></footer>
+</main><script id="report" type="application/json">__DATA__</script>
+<script>
+const data=JSON.parse(document.getElementById('report').textContent), $=id=>document.getElementById(id), pct=x=>(x*100).toFixed(2)+'%';
+const cell=(row,value)=>{const td=document.createElement('td');td.textContent=value;row.append(td)};
+for(const r of data.retrieval){const tr=document.createElement('tr');[r.method,...Object.values(r.metrics).map(x=>x.toFixed(4))].forEach(x=>cell(tr,x));$('retrieval-summary').append(tr);const op=new Option(r.method,r.method);$('variant').add(op)}
+function retrieval(){const r=data.retrieval.find(x=>x.method===$('variant').value);$('query-rows').replaceChildren();for(const c of r.cases){const tr=document.createElement('tr');[c.id+' '+c.query,c.relevant.join(', '),c.ranked.join(' → '),c.mrr_at_3.toFixed(3)].forEach(x=>cell(tr,x));$('query-rows').append(tr)}}
+$('variant').addEventListener('change',retrieval);retrieval();
+data.agent.forEach((r,i)=>$('trajectory').add(new Option(r.id+' / '+r.scenario,i)));
+function agent(){const r=data.agent[Number($('trajectory').value)];$('agent-status').textContent='预期：'+r.expected+' / 实际：'+r.status+' / 合同检查：'+(r.passed?'符合预期':'偏离预期');$('trace').textContent=JSON.stringify(r.trace||{reason:r.reason},null,2)}
+$('trajectory').addEventListener('change',agent);agent();
+data.growth.forEach((r,i)=>$('experiment').add(new Option(r.name,i)));
+function growth(){const r=data.growth[Number($('experiment').value)];$('growth-metrics').replaceChildren();for(const [label,v] of [['A 支付率',pct(r.a_rate)],['B 支付率',pct(r.b_rate)],['差值',(r.difference*100).toFixed(2)+' pp']]){const d=document.createElement('div'),b=document.createElement('b');b.textContent=v;d.append(b,document.createTextNode(label));$('growth-metrics').append(d)}$('growth-detail').textContent=JSON.stringify(r,null,2)}
+$('experiment').addEventListener('change',growth);growth();$('hash').textContent=data.fixture_sha256;
+</script></html>'''
+(ROOT/'index.html').write_text(template.replace('__DATA__',payload),encoding='utf-8',newline='\n')
+print('Built index.html from results/report.json')

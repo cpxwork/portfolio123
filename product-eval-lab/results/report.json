@@ -1,0 +1,732 @@
+{
+  "scope": "synthetic fixtures; ReAct-style orchestration with scripted decisions; lexical retrieval, no LLM benchmark",
+  "fixture_sha256": "704051897dc5c88963bb23033273afcb1d222aa5ff5a809567e5081e4600c359",
+  "retrieval": [
+    {
+      "method": "overlap",
+      "n": 12,
+      "metrics": {
+        "recall_at_3": 1.0,
+        "mrr_at_3": 0.8888888888888888,
+        "ndcg_at_3": 0.9166666666666666
+      },
+      "cases": [
+        {
+          "id": "Q01",
+          "query": "trial refund policy",
+          "relevant": [
+            "refund"
+          ],
+          "ranked": [
+            "refund_ancient",
+            "refund_old",
+            "refund"
+          ],
+          "recall_at_3": 1.0,
+          "mrr_at_3": 0.3333333333333333,
+          "ndcg_at_3": 0.5
+        },
+        {
+          "id": "Q02",
+          "query": "cancel subscription renewal",
+          "relevant": [
+            "cancel"
+          ],
+          "ranked": [
+            "cancel"
+          ],
+          "recall_at_3": 1.0,
+          "mrr_at_3": 1.0,
+          "ndcg_at_3": 1.0
+        },
+        {
+          "id": "Q03",
+          "query": "correct export delete memory",
+          "relevant": [
+            "privacy"
+          ],
+          "ranked": [
+            "export",
+            "injection",
+            "privacy"
+          ],
+          "recall_at_3": 1.0,
+          "mrr_at_3": 0.3333333333333333,
+          "ndcg_at_3": 0.5
+        },
+        {
+          "id": "Q04",
+          "query": "agent maximum tool calls",
+          "relevant": [
+            "budget"
+          ],
+          "ranked": [
+            "budget",
+            "security"
+          ],
+          "recall_at_3": 1.0,
+          "mrr_at_3": 1.0,
+          "ndcg_at_3": 1.0
+        },
+        {
+          "id": "Q05",
+          "query": "request timeout retry draft",
+          "relevant": [
+            "timeout"
+          ],
+          "ranked": [
+            "timeout",
+            "cancel"
+          ],
+          "recall_at_3": 1.0,
+          "mrr_at_3": 1.0,
+          "ndcg_at_3": 1.0
+        },
+        {
+          "id": "Q06",
+          "query": "payment receipt order timestamp",
+          "relevant": [
+            "receipt"
+          ],
+          "ranked": [
+            "receipt",
+            "refund"
+          ],
+          "recall_at_3": 1.0,
+          "mrr_at_3": 1.0,
+          "ndcg_at_3": 1.0
+        },
+        {
+          "id": "Q07",
+          "query": "document text instruction allowlist",
+          "relevant": [
+            "security"
+          ],
+          "ranked": [
+            "security",
+            "injection",
+            "budget"
+          ],
+          "recall_at_3": 1.0,
+          "mrr_at_3": 1.0,
+          "ndcg_at_3": 1.0
+        },
+        {
+          "id": "Q08",
+          "query": "relative calendar timezone",
+          "relevant": [
+            "timezone"
+          ],
+          "ranked": [
+            "timezone"
+          ],
+          "recall_at_3": 1.0,
+          "mrr_at_3": 1.0,
+          "ndcg_at_3": 1.0
+        },
+        {
+          "id": "Q09",
+          "query": "export JSON CSV formats",
+          "relevant": [
+            "export"
+          ],
+          "ranked": [
+            "export"
+          ],
+          "recall_at_3": 1.0,
+          "mrr_at_3": 1.0,
+          "ndcg_at_3": 1.0
+        },
+        {
+          "id": "Q10",
+          "query": "refund cancellation",
+          "relevant": [
+            "refund",
+            "cancel"
+          ],
+          "ranked": [
+            "cancel",
+            "refund",
+            "refund_ancient"
+          ],
+          "recall_at_3": 1.0,
+          "mrr_at_3": 1.0,
+          "ndcg_at_3": 1.0
+        },
+        {
+          "id": "Q11",
+          "query": "payment success client clicks",
+          "relevant": [
+            "receipt"
+          ],
+          "ranked": [
+            "receipt",
+            "refund"
+          ],
+          "recall_at_3": 1.0,
+          "mrr_at_3": 1.0,
+          "ndcg_at_3": 1.0
+        },
+        {
+          "id": "Q12",
+          "query": "trial refund days",
+          "relevant": [
+            "refund"
+          ],
+          "ranked": [
+            "refund",
+            "refund_ancient",
+            "refund_old"
+          ],
+          "recall_at_3": 1.0,
+          "mrr_at_3": 1.0,
+          "ndcg_at_3": 1.0
+        }
+      ]
+    },
+    {
+      "method": "bm25",
+      "n": 12,
+      "metrics": {
+        "recall_at_3": 0.9583333333333334,
+        "mrr_at_3": 0.8472222222222222,
+        "ndcg_at_3": 0.8536730788614096
+      },
+      "cases": [
+        {
+          "id": "Q01",
+          "query": "trial refund policy",
+          "relevant": [
+            "refund"
+          ],
+          "ranked": [
+            "refund_old",
+            "refund_ancient",
+            "refund"
+          ],
+          "recall_at_3": 1.0,
+          "mrr_at_3": 0.3333333333333333,
+          "ndcg_at_3": 0.5
+        },
+        {
+          "id": "Q02",
+          "query": "cancel subscription renewal",
+          "relevant": [
+            "cancel"
+          ],
+          "ranked": [
+            "cancel"
+          ],
+          "recall_at_3": 1.0,
+          "mrr_at_3": 1.0,
+          "ndcg_at_3": 1.0
+        },
+        {
+          "id": "Q03",
+          "query": "correct export delete memory",
+          "relevant": [
+            "privacy"
+          ],
+          "ranked": [
+            "export",
+            "privacy",
+            "injection"
+          ],
+          "recall_at_3": 1.0,
+          "mrr_at_3": 0.5,
+          "ndcg_at_3": 0.6309297535714575
+        },
+        {
+          "id": "Q04",
+          "query": "agent maximum tool calls",
+          "relevant": [
+            "budget"
+          ],
+          "ranked": [
+            "budget",
+            "security"
+          ],
+          "recall_at_3": 1.0,
+          "mrr_at_3": 1.0,
+          "ndcg_at_3": 1.0
+        },
+        {
+          "id": "Q05",
+          "query": "request timeout retry draft",
+          "relevant": [
+            "timeout"
+          ],
+          "ranked": [
+            "timeout",
+            "cancel"
+          ],
+          "recall_at_3": 1.0,
+          "mrr_at_3": 1.0,
+          "ndcg_at_3": 1.0
+        },
+        {
+          "id": "Q06",
+          "query": "payment receipt order timestamp",
+          "relevant": [
+            "receipt"
+          ],
+          "ranked": [
+            "receipt",
+            "refund"
+          ],
+          "recall_at_3": 1.0,
+          "mrr_at_3": 1.0,
+          "ndcg_at_3": 1.0
+        },
+        {
+          "id": "Q07",
+          "query": "document text instruction allowlist",
+          "relevant": [
+            "security"
+          ],
+          "ranked": [
+            "security",
+            "injection",
+            "budget"
+          ],
+          "recall_at_3": 1.0,
+          "mrr_at_3": 1.0,
+          "ndcg_at_3": 1.0
+        },
+        {
+          "id": "Q08",
+          "query": "relative calendar timezone",
+          "relevant": [
+            "timezone"
+          ],
+          "ranked": [
+            "timezone"
+          ],
+          "recall_at_3": 1.0,
+          "mrr_at_3": 1.0,
+          "ndcg_at_3": 1.0
+        },
+        {
+          "id": "Q09",
+          "query": "export JSON CSV formats",
+          "relevant": [
+            "export"
+          ],
+          "ranked": [
+            "export"
+          ],
+          "recall_at_3": 1.0,
+          "mrr_at_3": 1.0,
+          "ndcg_at_3": 1.0
+        },
+        {
+          "id": "Q10",
+          "query": "refund cancellation",
+          "relevant": [
+            "refund",
+            "cancel"
+          ],
+          "ranked": [
+            "cancel",
+            "refund_old",
+            "refund_ancient"
+          ],
+          "recall_at_3": 0.5,
+          "mrr_at_3": 1.0,
+          "ndcg_at_3": 0.6131471927654584
+        },
+        {
+          "id": "Q11",
+          "query": "payment success client clicks",
+          "relevant": [
+            "receipt"
+          ],
+          "ranked": [
+            "receipt",
+            "refund"
+          ],
+          "recall_at_3": 1.0,
+          "mrr_at_3": 1.0,
+          "ndcg_at_3": 1.0
+        },
+        {
+          "id": "Q12",
+          "query": "trial refund days",
+          "relevant": [
+            "refund"
+          ],
+          "ranked": [
+            "refund_old",
+            "refund_ancient",
+            "refund"
+          ],
+          "recall_at_3": 1.0,
+          "mrr_at_3": 0.3333333333333333,
+          "ndcg_at_3": 0.5
+        }
+      ]
+    },
+    {
+      "method": "bm25_current",
+      "n": 12,
+      "metrics": {
+        "recall_at_3": 1.0,
+        "mrr_at_3": 0.9583333333333334,
+        "ndcg_at_3": 0.9692441461309548
+      },
+      "cases": [
+        {
+          "id": "Q01",
+          "query": "trial refund policy",
+          "relevant": [
+            "refund"
+          ],
+          "ranked": [
+            "refund",
+            "cancel"
+          ],
+          "recall_at_3": 1.0,
+          "mrr_at_3": 1.0,
+          "ndcg_at_3": 1.0
+        },
+        {
+          "id": "Q02",
+          "query": "cancel subscription renewal",
+          "relevant": [
+            "cancel"
+          ],
+          "ranked": [
+            "cancel"
+          ],
+          "recall_at_3": 1.0,
+          "mrr_at_3": 1.0,
+          "ndcg_at_3": 1.0
+        },
+        {
+          "id": "Q03",
+          "query": "correct export delete memory",
+          "relevant": [
+            "privacy"
+          ],
+          "ranked": [
+            "export",
+            "privacy",
+            "injection"
+          ],
+          "recall_at_3": 1.0,
+          "mrr_at_3": 0.5,
+          "ndcg_at_3": 0.6309297535714575
+        },
+        {
+          "id": "Q04",
+          "query": "agent maximum tool calls",
+          "relevant": [
+            "budget"
+          ],
+          "ranked": [
+            "budget",
+            "security"
+          ],
+          "recall_at_3": 1.0,
+          "mrr_at_3": 1.0,
+          "ndcg_at_3": 1.0
+        },
+        {
+          "id": "Q05",
+          "query": "request timeout retry draft",
+          "relevant": [
+            "timeout"
+          ],
+          "ranked": [
+            "timeout",
+            "cancel"
+          ],
+          "recall_at_3": 1.0,
+          "mrr_at_3": 1.0,
+          "ndcg_at_3": 1.0
+        },
+        {
+          "id": "Q06",
+          "query": "payment receipt order timestamp",
+          "relevant": [
+            "receipt"
+          ],
+          "ranked": [
+            "receipt",
+            "refund"
+          ],
+          "recall_at_3": 1.0,
+          "mrr_at_3": 1.0,
+          "ndcg_at_3": 1.0
+        },
+        {
+          "id": "Q07",
+          "query": "document text instruction allowlist",
+          "relevant": [
+            "security"
+          ],
+          "ranked": [
+            "security",
+            "injection",
+            "budget"
+          ],
+          "recall_at_3": 1.0,
+          "mrr_at_3": 1.0,
+          "ndcg_at_3": 1.0
+        },
+        {
+          "id": "Q08",
+          "query": "relative calendar timezone",
+          "relevant": [
+            "timezone"
+          ],
+          "ranked": [
+            "timezone"
+          ],
+          "recall_at_3": 1.0,
+          "mrr_at_3": 1.0,
+          "ndcg_at_3": 1.0
+        },
+        {
+          "id": "Q09",
+          "query": "export JSON CSV formats",
+          "relevant": [
+            "export"
+          ],
+          "ranked": [
+            "export"
+          ],
+          "recall_at_3": 1.0,
+          "mrr_at_3": 1.0,
+          "ndcg_at_3": 1.0
+        },
+        {
+          "id": "Q10",
+          "query": "refund cancellation",
+          "relevant": [
+            "refund",
+            "cancel"
+          ],
+          "ranked": [
+            "cancel",
+            "refund"
+          ],
+          "recall_at_3": 1.0,
+          "mrr_at_3": 1.0,
+          "ndcg_at_3": 1.0
+        },
+        {
+          "id": "Q11",
+          "query": "payment success client clicks",
+          "relevant": [
+            "receipt"
+          ],
+          "ranked": [
+            "receipt",
+            "refund"
+          ],
+          "recall_at_3": 1.0,
+          "mrr_at_3": 1.0,
+          "ndcg_at_3": 1.0
+        },
+        {
+          "id": "Q12",
+          "query": "trial refund days",
+          "relevant": [
+            "refund"
+          ],
+          "ranked": [
+            "refund",
+            "cancel"
+          ],
+          "recall_at_3": 1.0,
+          "mrr_at_3": 1.0,
+          "ndcg_at_3": 1.0
+        }
+      ]
+    }
+  ],
+  "agent": [
+    {
+      "id": "A01",
+      "scenario": "search, read and grounded answer",
+      "expected": "finished",
+      "passed": true,
+      "status": "finished",
+      "tool_calls": 2,
+      "trace": [
+        {
+          "action": "search",
+          "args": {
+            "query": "trial refund"
+          },
+          "observation": [
+            {
+              "id": "refund",
+              "title": "Current trial refund",
+              "score": 2.124061
+            },
+            {
+              "id": "cancel",
+              "title": "Subscription cancellation",
+              "score": 1.033514
+            }
+          ]
+        },
+        {
+          "action": "read",
+          "args": {
+            "id": "refund"
+          },
+          "observation": {
+            "id": "refund",
+            "text": "Trial refund requests are accepted within seven days of the first payment. A used credit pack is excluded. Refunds return to the original payment method.",
+            "source_type": "synthetic_document"
+          }
+        },
+        {
+          "action": "finish",
+          "answer": "Trial refund requests are accepted within seven days of the first payment.",
+          "citations": [
+            "refund"
+          ]
+        }
+      ],
+      "answer": "Trial refund requests are accepted within seven days of the first payment."
+    },
+    {
+      "id": "A02",
+      "scenario": "unread citation rejected",
+      "expected": "rejected",
+      "passed": true,
+      "status": "rejected",
+      "reason": "citation was not read"
+    },
+    {
+      "id": "A03",
+      "scenario": "unsupported statement rejected",
+      "expected": "rejected",
+      "passed": true,
+      "status": "rejected",
+      "reason": "answer must be a verbatim evidence excerpt"
+    },
+    {
+      "id": "A04",
+      "scenario": "tool budget exceeded",
+      "expected": "rejected",
+      "passed": true,
+      "status": "rejected",
+      "reason": "tool call budget exceeded"
+    },
+    {
+      "id": "A05",
+      "scenario": "document instruction cannot invoke write tool",
+      "expected": "rejected",
+      "passed": true,
+      "status": "rejected",
+      "reason": "tool is not allowlisted"
+    },
+    {
+      "id": "A06",
+      "scenario": "outdated evidence rejected",
+      "expected": "rejected",
+      "passed": true,
+      "status": "rejected",
+      "reason": "unknown or stale document"
+    },
+    {
+      "id": "A07",
+      "scenario": "invalid argument rejected",
+      "expected": "rejected",
+      "passed": true,
+      "status": "rejected",
+      "reason": "invalid query"
+    },
+    {
+      "id": "A08",
+      "scenario": "trace without final answer rejected",
+      "expected": "rejected",
+      "passed": true,
+      "status": "rejected",
+      "reason": "trajectory ended without a grounded final answer"
+    }
+  ],
+  "growth": [
+    {
+      "name": "balanced_positive",
+      "a_rate": 0.1,
+      "b_rate": 0.13,
+      "difference": 0.03,
+      "difference_ci95": [
+        0.010231323254744632,
+        0.04980577034223508
+      ],
+      "p_value": 0.0029420930704592836,
+      "srm_p_value": 1.0,
+      "srm_passed": true,
+      "a_refund_rate": 0.05,
+      "b_refund_rate": 0.07692307692307693,
+      "approximation_valid": true,
+      "status": "analysis_ready",
+      "method": "two-sided pooled z; Newcombe-Wilson difference interval; equal-allocation normal SRM approximation",
+      "decision_scope": "fixed-horizon synthetic analysis; refund guardrail and practical effect need separate decisions"
+    },
+    {
+      "name": "allocation_problem",
+      "a_rate": 0.1,
+      "b_rate": 0.13,
+      "difference": 0.03,
+      "difference_ci95": [
+        0.009919046937132036,
+        0.050759712498268175
+      ],
+      "p_value": 0.003204422188976626,
+      "srm_p_value": 1.1314837902432894e-36,
+      "srm_passed": false,
+      "a_refund_rate": 0.0,
+      "b_refund_rate": 0.0,
+      "approximation_valid": true,
+      "status": "allocation_mismatch",
+      "method": "two-sided pooled z; Newcombe-Wilson difference interval; equal-allocation normal SRM approximation",
+      "decision_scope": "fixed-horizon synthetic analysis; refund guardrail and practical effect need separate decisions"
+    },
+    {
+      "name": "no_difference",
+      "a_rate": 0.1,
+      "b_rate": 0.1,
+      "difference": 0.0,
+      "difference_ci95": [
+        -0.01863922089583699,
+        0.01863922089583699
+      ],
+      "p_value": 1.0,
+      "srm_p_value": 1.0,
+      "srm_passed": true,
+      "a_refund_rate": 0.0,
+      "b_refund_rate": 0.0,
+      "approximation_valid": true,
+      "status": "analysis_ready",
+      "method": "two-sided pooled z; Newcombe-Wilson difference interval; equal-allocation normal SRM approximation",
+      "decision_scope": "fixed-horizon synthetic analysis; refund guardrail and practical effect need separate decisions"
+    },
+    {
+      "name": "sparse_counts",
+      "a_rate": 0.0005,
+      "b_rate": 0.001,
+      "difference": 0.0005,
+      "difference_ci95": [
+        -0.0019374085005330172,
+        0.0031708608233832827
+      ],
+      "p_value": 0.5635565612549721,
+      "srm_p_value": 1.0,
+      "srm_passed": true,
+      "a_refund_rate": 0.0,
+      "b_refund_rate": 0.0,
+      "approximation_valid": false,
+      "status": "insufficient_counts",
+      "method": "two-sided pooled z; Newcombe-Wilson difference interval; equal-allocation normal SRM approximation",
+      "decision_scope": "fixed-horizon synthetic analysis; refund guardrail and practical effect need separate decisions"
+    }
+  ]
+}

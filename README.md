@@ -1,4 +1,23 @@
-# 陈鹏旭｜产品与 AI 学习作品集
+# 陈鹏旭｜产品与 AI 作品集
+
+从产品体验、方案设计到评测与数据分析，按问题、决策和证据组织作品。
+
+## 最新入口
+
+[产品作品集 PDF（10 页）](docs/product-portfolio.pdf) · [Product Evaluation Lab](product-eval-lab/README.md) · [实验室交互报告源码](product-eval-lab/index.html) · [验证记录](docs/validation-record.md)
+
+| 作品 | 展示重点 | 查看入口 |
+|---|---|---|
+| 嗨皮瓜 | 四角色协作、自然语言行动建议、反馈与记忆、模型与规则分工 | [产品与源码](haipigua/README.md) |
+| Product Evaluation Lab | ReAct 工具编排、检索版本对照、A/B 分析、逐条轨迹与边界检查 | [运行说明](product-eval-lab/README.md) |
+| 会员转化实验方案 | 信息组织、ITT 指标、退款护栏、埋点与预注册决策 | [方案](membership-conversion-ab/README.md) |
+| SQL 用户行为分析 | 去重、订单快照、退款、成熟队列与指标口径 | [分析报告](sql-analysis/分析报告.md) |
+
+实验室默认使用固定脚本决策和合成文档，不把执行器检查作为模型准确率；检索报告保留表现下降的配置。模型接口需要单独显式开启。作品集中的个人职责、团队公开成果和模拟分析按案例分别标明。
+
+---
+
+## 既有学习与专项作品
 
 围绕具体问题提供可玩原型、PRD、数据口径、源码和可复跑验证。新增咖啡经营 Demo、任务型助手评测、嗨皮瓜诊断与结构化输出核验；既有指标管理平台、SQL 和游戏数值资料继续保留。
 

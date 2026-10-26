@@ -1,0 +1,26 @@
+name: Product evaluation lab
+on:
+  push:
+    paths: ['product-eval-lab/**', '.github/workflows/product-eval-lab.yml']
+  pull_request:
+    paths: ['product-eval-lab/**', '.github/workflows/product-eval-lab.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Contract tests
+        working-directory: product-eval-lab
+        run: python -m unittest -v
+      - name: Reproduce fixed experiments
+        working-directory: product-eval-lab
+        run: |
+          python lab.py
+          python build_dashboard.py
+          git diff --exit-code -- results/report.json index.html
