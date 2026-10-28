@@ -4,11 +4,11 @@
 
 ## 最新入口
 
-[产品作品集 PDF（10 页）](docs/product-portfolio.pdf) · [Product Evaluation Lab](product-eval-lab/README.md) · [实验室交互报告源码](product-eval-lab/index.html) · [验证记录](docs/validation-record.md)
+[产品作品集 PDF（12 页）](docs/product-portfolio.pdf) · [嗨皮瓜需求与验收样例](docs/haipigua-delivery-case.md) · [Product Evaluation Lab](product-eval-lab/README.md) · [验证记录](docs/validation-record.md)
 
 | 作品 | 展示重点 | 查看入口 |
 |---|---|---|
-| 嗨皮瓜 | 四角色协作、自然语言行动建议、反馈与记忆、模型与规则分工 | [产品与源码](haipigua/README.md) |
+| 嗨皮瓜 | 四角色协作、自然语言行动建议、反馈与记忆、模型与规则分工 | [腾讯云演示](https://frost-guard-d3gw4cry5916d32c4-1503361620.tcloudbaseapp.com/haipigua/) · [需求验收](docs/haipigua-delivery-case.md) · [源码](haipigua/README.md) |
 | Product Evaluation Lab | ReAct 工具编排、检索版本对照、A/B 分析、逐条轨迹与边界检查 | [运行说明](product-eval-lab/README.md) |
 | 会员转化实验方案 | 信息组织、ITT 指标、退款护栏、埋点与预注册决策 | [方案](membership-conversion-ab/README.md) |
 | SQL 用户行为分析 | 去重、订单快照、退款、成熟队列与指标口径 | [分析报告](sql-analysis/分析报告.md) |
